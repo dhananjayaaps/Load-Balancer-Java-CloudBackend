@@ -43,8 +43,8 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/authenticate", "/auth/**", "/health", "/login").permitAll()
-                        .requestMatchers("/clinics/**").hasAnyRole("ADMIN")
+                        .requestMatchers( "/auth/**", "/health").permitAll()
+                        .requestMatchers("/users/**").permitAll()
                 )
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

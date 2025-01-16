@@ -1,5 +1,6 @@
 package com.cloudbackend.controller;
 
+import com.cloudbackend.dto.LoginRequest;
 import com.cloudbackend.service.AuthenticationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,7 +16,7 @@ public class AuthenticationController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestParam String username, @RequestParam String password) {
-        return ResponseEntity.ok(authenticationService.login(username, password));
+    public ResponseEntity<String> login(@RequestBody LoginRequest loginRequest) {
+        return ResponseEntity.ok(authenticationService.login(loginRequest.getUsername(), loginRequest.getPassword()));
     }
 }

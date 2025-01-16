@@ -1,5 +1,6 @@
 package com.cloudbackend.controller;
 
+import com.cloudbackend.dto.UserDTO;
 import com.cloudbackend.entity.User;
 import com.cloudbackend.service.UserService;
 import org.springframework.http.ResponseEntity;
@@ -16,8 +17,8 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<User> createUser(@RequestParam String username, @RequestParam String password, @RequestParam String roleName) {
-        return ResponseEntity.ok(userService.createUser(username, password, roleName));
+    public ResponseEntity<User> createUser(@RequestBody UserDTO userDTO) {
+        return ResponseEntity.ok(userService.createUser(userDTO.getUsername(), userDTO.getPassword(), userDTO.getRole()));
     }
 
     @DeleteMapping("/{id}")

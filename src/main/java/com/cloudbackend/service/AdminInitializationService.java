@@ -32,6 +32,13 @@ public class AdminInitializationService {
                 roleRepository.save(adminRole);
             }
 
+            Role userRole = roleRepository.findByName("USER");
+            if (userRole == null) {
+                userRole = new Role();
+                userRole.setName("USER");
+                roleRepository.save(userRole);
+            }
+
             User adminUser = new User();
             adminUser.setUsername("admin");
             adminUser.setPassword(passwordEncoder.encode("admin123")); // Set a secure password
