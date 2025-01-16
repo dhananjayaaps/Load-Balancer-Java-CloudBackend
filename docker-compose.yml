@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  loadbalancer:
+    build:
+      context: ./filemanager
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - STORAGE_CONTAINERS=http://storage1:8081,http://storage2:8082
+    depends_on:
+      - storage1
+      - storage2
+
+  storage1:
+    build:
+      context: ./storage
+    volumes:
+      - storage1_data:/data
+    ports:
+      - "8081:80"
+
+  storage2:
+    build:
+      context: ./storage
+    volumes:
+      - storage2_data:/data
+    ports:
+      - "8082:80"
+
+volumes:
+  storage1_data:
+  storage2_data:
