@@ -2,7 +2,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 import os
 
-def generate_aes_key(key_size=32):
+def generate_aes_key(key_size=64):
     """
     Generates a random AES key of the specified size.
     Default size is 256 bits (32 bytes).
