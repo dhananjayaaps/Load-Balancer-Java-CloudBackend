@@ -53,9 +53,10 @@ public class FileService {
 
             // Encrypt and upload each chunk
             for (int i = 0; i < chunks.size(); i++) {
-//                String encryptedChunk = AESUtils.encrypt(chunks.get(i), encryptionKey);
+                String encryptedChunk = AESUtils.encrypt(chunks.get(i), encryptionKey);
                 String targetContainer = loadBalancer.getNextContainer(containers);
-                storageClient.saveChunk(targetContainer, fileName + "_chunk_" + i, chunks.get(i));
+                assert encryptedChunk != null;
+                storageClient.saveChunk(targetContainer, fileName + "_chunk_" + i, encryptedChunk.getBytes());
             }
         } catch (Exception e) {
             System.out.println("Error during file upload: " + e.getMessage());
