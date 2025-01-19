@@ -4,22 +4,10 @@ import com.cloudbackend.entity.FileMetadata;
 import com.cloudbackend.entity.User;
 import com.cloudbackend.repository.FileMetadataRepository;
 import com.cloudbackend.util.AESUtils;
-import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestParam;
 
-import java.nio.file.AccessDeniedException;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class FileService {
@@ -41,9 +29,12 @@ public class FileService {
         this.fileMetadataRepository = fileMetadataRepository;
     }
 
-    public void uploadFile(String fileName, byte[] fileData, User owner) {
+    public void uploadFile(String fileName, byte[] fileData, User owner, String schedulingAlgorithm, List<Integer> priorities) {
         try {
+            // Split the file into chunks
             List<byte[]> chunks = chunkingService.splitFile(fileData, 1024);
+
+            // Get the list of containers
             List<String> containers = List.of(storageContainers.split(","));
 
             // Save file metadata
@@ -51,13 +42,17 @@ public class FileService {
             metadata.setTotalChunks(chunks.size());
             fileMetadataRepository.save(metadata);
 
-//            System.out.println("Uploading file: " + fileName + " to " + containers.size() + " containers");
-
-            // Encrypt and upload each chunk
+            // Loop through chunks and upload them to the selected containers based on the algorithm
             for (int i = 0; i < chunks.size(); i++) {
                 String encryptedChunk = AESUtils.encrypt(chunks.get(i), encryptionKey);
-                String targetContainer = loadBalancer.getNextContainer(containers);
+
+                // Select the target container based on the scheduling algorithm
+                String targetContainer = loadBalancer.handleTraffic(containers, schedulingAlgorithm, priorities);
+
+                // Ensure encryption was successful
                 assert encryptedChunk != null;
+
+                // Save the encrypted chunk to the selected container
                 storageClient.saveChunk(targetContainer, fileName + "_chunk_" + i, encryptedChunk.getBytes());
             }
         } catch (Exception e) {

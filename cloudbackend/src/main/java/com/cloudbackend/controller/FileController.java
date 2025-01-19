@@ -37,7 +37,7 @@ public class FileController {
             User user = userRepository.findByUsername(userDetails.getUsername()).get();
 
             // Process file upload
-            fileService.uploadFile(file.getOriginalFilename(), file.getBytes(), user);
+            fileService.uploadFile(file.getOriginalFilename(), file.getBytes(), user, "RR", null);
 
             return ResponseEntity.ok("File uploaded successfully");
         } catch (Exception e) {
