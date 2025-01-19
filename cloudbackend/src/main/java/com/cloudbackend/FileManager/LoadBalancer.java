@@ -9,18 +9,29 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class LoadBalancer {
 
     private final AtomicInteger counter = new AtomicInteger(0);
+    private final HealthCheck healthCheck;
 
     // Example for load balancing algorithms:
     private final Map<String, Integer> serverLoad = new HashMap<>(); // Store the load for each server
 
-    public LoadBalancer() {
+    public LoadBalancer(HealthCheck healthCheck) {
         // Initialize server load with zero for each container (you can adjust it dynamically)
+        this.healthCheck = healthCheck;
     }
 
     // Round Robin load balancing
     public String getNextContainer(List<String> containers) {
-        int index = counter.getAndIncrement() % containers.size();
-        return containers.get(index);
+        healthCheck.performHealthCheck(containers);
+        List<String> healthyContainers = containers.stream()
+                .filter(container -> healthCheck.getContainerHealthStatus().getOrDefault(container, false))
+                .toList();
+
+        if (healthyContainers.isEmpty()) {
+            throw new RuntimeException("No healthy containers available.");
+        }
+
+        int index = counter.getAndIncrement() % healthyContainers.size();
+        return healthyContainers.get(index);
     }
 
     // Priority Scheduling (tasks with higher priority should be processed first)
@@ -58,15 +69,11 @@ public class LoadBalancer {
 
     // Method to handle traffic spikes and optimize load balancing
     public String handleTraffic(List<String> containers, String algorithm, List<Integer> priorities) {
-        switch (algorithm) {
-            case "RR":
-                return getNextContainer(containers); // Round Robin
-            case "Priority":
-                return getContainerWithPriority(containers, priorities); // Priority Scheduling
-            case "SJN":
-                return getContainerWithShortestJob(containers); // Shortest Job Next
-            default:
-                return getNextContainer(containers); // Default to Round Robin
-        }
+        return switch (algorithm) {
+            case "RR" -> getNextContainer(containers); // Round Robin
+            case "Priority" -> getContainerWithPriority(containers, priorities); // Priority Scheduling
+            case "SJN" -> getContainerWithShortestJob(containers); // Shortest Job Next
+            default -> getNextContainer(containers); // Default to Round Robin
+        };
     }
 }

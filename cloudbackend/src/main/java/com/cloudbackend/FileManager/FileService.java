@@ -20,12 +20,13 @@ public class FileService {
 
     private final ChunkingService chunkingService;
     private final StorageClient storageClient;
-    private final LoadBalancer loadBalancer = new LoadBalancer();
+    private final LoadBalancer loadBalancer;
     private final FileMetadataRepository fileMetadataRepository;
 
-    public FileService(ChunkingService chunkingService, StorageClient storageClient, FileMetadataRepository fileMetadataRepository) {
+    public FileService(ChunkingService chunkingService, StorageClient storageClient, LoadBalancer loadBalancer, FileMetadataRepository fileMetadataRepository) {
         this.chunkingService = chunkingService;
         this.storageClient = storageClient;
+        this.loadBalancer = loadBalancer;
         this.fileMetadataRepository = fileMetadataRepository;
     }
 
