@@ -1,37 +1,38 @@
 package com.cloudbackend.util;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
-public class Request implements Comparable<Request> {
-    private static final AtomicInteger idCounter = new AtomicInteger(0);
-    private final int id;
-    private int priority;
-    private long timestamp;
+public class Request {
+    private static final AtomicLong ID_GENERATOR = new AtomicLong();
+    private final long id; // Unique ID
+    private final long timestamp; // Time the request was created
+    private int priority; // Current priority of the request
+    private final String operation; // Upload, download, etc.
 
-    public Request(int priority) {
-        this.id = idCounter.incrementAndGet();
-        this.priority = priority;
+    public Request(int initialPriority, String operation) {
+        this.id = ID_GENERATOR.incrementAndGet();
         this.timestamp = System.currentTimeMillis();
+        this.priority = initialPriority;
+        this.operation = operation;
     }
 
-    public int getId() {
+    public long getId() {
         return id;
-    }
-
-    public int getPriority() {
-        return priority;
-    }
-
-    public void incrementPriority() {
-        this.priority++;
     }
 
     public long getTimestamp() {
         return timestamp;
     }
 
-    @Override
-    public int compareTo(Request other) {
-        return Integer.compare(other.priority, this.priority); // Higher priority first
+    public int getPriority() {
+        return priority;
+    }
+
+    public String getOperation() {
+        return operation;
+    }
+
+    public void increasePriority(int increment) {
+        this.priority += increment;
     }
 }

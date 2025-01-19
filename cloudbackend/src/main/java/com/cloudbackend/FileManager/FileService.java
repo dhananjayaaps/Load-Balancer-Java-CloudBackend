@@ -15,10 +15,10 @@ import java.util.List;
 public class FileService {
 
     @Value("${STORAGE_CONTAINERS}")
-    private String storageContainers; // Load the storage containers from environment variable
+    private String storageContainers; // Storage containers from environment variable
 
     @Value("${ENCRYPTION_KEY}")
-    private String encryptionKey; // Load the common key from environment variable
+    private String encryptionKey; // Encryption key from environment variable
 
     private final ChunkingService chunkingService;
     private final StorageClient storageClient;
@@ -28,7 +28,14 @@ public class FileService {
     private final TrafficMonitoringService trafficMonitoringService;
 
     @Autowired
-    public FileService(ChunkingService chunkingService, StorageClient storageClient, LoadBalancer loadBalancer, FileMetadataRepository fileMetadataRepository, TrafficController trafficController, TrafficMonitoringService trafficMonitoringService) {
+    public FileService(
+            ChunkingService chunkingService,
+            StorageClient storageClient,
+            LoadBalancer loadBalancer,
+            FileMetadataRepository fileMetadataRepository,
+            TrafficController trafficController,
+            TrafficMonitoringService trafficMonitoringService
+    ) {
         this.chunkingService = chunkingService;
         this.storageClient = storageClient;
         this.loadBalancer = loadBalancer;
@@ -39,46 +46,51 @@ public class FileService {
 
     public void uploadFile(String fileName, byte[] fileData, User owner, String schedulingAlgorithm, List<Integer> priorities) {
         try {
-            // Acquire a slot for upload
-            trafficController.acquireUploadSlot();
+            // Determine priority and submit upload request
+            int priority = calculatePriority(owner, priorities);
+            trafficMonitoringService.incrementActiveRequests();
+            trafficController.submitRequest(priority, () -> {
+                try {
 
-            // Monitor and simulate traffic
-            trafficMonitoringService.monitorTrafficAndApplyDelay();
-
-            // Split the file into chunks
-            List<byte[]> chunks = chunkingService.splitFile(fileData, 1024);
-
-            // Get the list of containers
-            List<String> containers = List.of(storageContainers.split(","));
-
-            // Save file metadata
-            FileMetadata metadata = new FileMetadata(fileName, "path/to/file", (long) fileData.length, owner);
-            metadata.setTotalChunks(chunks.size());
-            fileMetadataRepository.save(metadata);
-
-            // Loop through chunks and upload them to the selected containers based on the algorithm
-            for (int i = 0; i < chunks.size(); i++) {
-                String encryptedChunk = AESUtils.encrypt(chunks.get(i), encryptionKey);
-
-                // Select the target container based on the scheduling algorithm
-                String targetContainer = loadBalancer.handleTraffic(containers, schedulingAlgorithm, priorities);
-
-                // Ensure encryption was successful
-                assert encryptedChunk != null;
-
-                // Save the encrypted chunk to the selected container
-                storageClient.saveChunk(targetContainer, fileName + "_chunk_" + i, encryptedChunk.getBytes());
-            }
-        } catch (Exception e) {
-            System.out.println("Error during file upload: " + e.getMessage());
-            throw new RuntimeException("Error during file upload", e);
+                    processUpload(fileName, fileData, owner, schedulingAlgorithm, priorities);
+                } catch (Exception e) {
+                    System.err.println("Error during upload processing: " + e.getMessage());
+                }
+//                trafficMonitoringService.incrementActiveRequests();
+            });
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Request submission interrupted", e);
         } finally {
-            // Release the upload slot
-            trafficController.releaseUploadSlot();
+            trafficMonitoringService.decrementActiveRequests();
         }
     }
 
+    private void processUpload(String fileName, byte[] fileData, User owner, String schedulingAlgorithm, List<Integer> priorities) throws Exception {
 
+        TrafficEmulator.applyTrafficEmulatedDelay(trafficMonitoringService.determineTrafficLevel());
+
+        List<byte[]> chunks = chunkingService.splitFile(fileData, 1024);
+
+        List<String> containers = List.of(storageContainers.split(","));
+
+        // Save file metadata
+        FileMetadata metadata = new FileMetadata(fileName, "path/to/file", (long) fileData.length, owner);
+        metadata.setTotalChunks(chunks.size());
+        fileMetadataRepository.save(metadata);
+
+        // Encrypt and upload chunks
+        for (int i = 0; i < chunks.size(); i++) {
+            String encryptedChunk = AESUtils.encrypt(chunks.get(i), encryptionKey);
+            String targetContainer = loadBalancer.handleTraffic(containers, schedulingAlgorithm, priorities);
+            storageClient.saveChunk(targetContainer, fileName + "_chunk_" + i, encryptedChunk.getBytes());
+        }
+    }
+
+    private int calculatePriority(User owner, List<Integer> priorities) {
+        // Calculate priority based on provided logic
+        return priorities != null && !priorities.isEmpty() ? priorities.get(0) : 0;
+    }
 
     private byte[] mergeChunks(byte[] existingFile, byte[] newChunk) {
         byte[] merged = new byte[existingFile.length + newChunk.length];
@@ -89,44 +101,36 @@ public class FileService {
 
     public byte[] downloadFile(String fileName) throws Exception {
         try {
-            // Retrieve file metadata to get the number of chunks
-            FileMetadata metadata = null;
-            List<FileMetadata> metadataList = fileMetadataRepository.findAllByName(fileName);
+            // Retrieve metadata for the file
+            FileMetadata metadata = fileMetadataRepository.findAllByName(fileName)
+                    .stream()
+                    .reduce((first, second) -> second) // Get the last metadata entry
+                    .orElseThrow(() -> new RuntimeException("File metadata not found."));
 
-            if (metadataList != null && !metadataList.isEmpty()) {
-                metadata = metadataList.get(metadataList.size() - 1); // Get the last element
-            }
-
-            if (metadata == null) {
-                throw new RuntimeException("File metadata not found.");
-            }
+            trafficController.acquireDownloadSlot();
 
             int totalChunks = metadata.getTotalChunks();
             List<String> containers = List.of(storageContainers.split(","));
 
-            // Initialize an array to hold the merged file data
+            // Initialize byte array for the merged file
             byte[] fileData = new byte[0];
 
-            // Download and decrypt each chunk, then merge them
+            // Download and decrypt each chunk
             for (int i = 0; i < totalChunks; i++) {
                 String targetContainer = loadBalancer.getNextContainer(containers);
                 byte[] encryptedChunk = storageClient.getChunk(targetContainer, fileName + "_chunk_" + i);
 
-                // Decrypt the chunk and ensure it is a byte array
+                // Decrypt and merge the chunk
                 byte[] decryptedChunk = AESUtils.decrypt(new String(encryptedChunk), encryptionKey);
-
                 if (decryptedChunk != null) {
                     fileData = mergeChunks(fileData, decryptedChunk);
                 }
             }
 
-            // Return the merged and decrypted file data
             return fileData;
         } catch (Exception e) {
-            System.out.println("Error during file download: " + e.getMessage());
+            System.err.println("Error during file download: " + e.getMessage());
             throw new RuntimeException("Error during file download", e);
         }
     }
-
-
 }
