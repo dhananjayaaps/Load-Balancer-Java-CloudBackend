@@ -17,7 +17,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.nio.file.AccessDeniedException;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class FileService {
@@ -64,38 +66,6 @@ public class FileService {
         }
     }
 
-//    @GetMapping("/download")
-//    public ResponseEntity<Resource> downloadFile(
-//            @RequestParam String fileName,
-//            @RequestHeader("Authorization") String bearerToken) {
-//
-//        try {
-//            // Extract user from the token
-//            String username = jwtUtils.extractUsernameFromToken(bearerToken.substring(7));
-//            User user = userRepository.findByUsername(username)
-//                    .orElseThrow(() -> new RuntimeException("User not found"));
-//
-//            // Check if the user is the owner of the file
-//            FileMetadata metadata = fileMetadataRepository.findByName(fileName)
-//                    .orElseThrow(() -> new RuntimeException("File not found"));
-//            if (!metadata.getOwner().equals(user)) {
-//                throw new AccessDeniedException("You do not have permission to access this file");
-//            }
-//
-//            // Download the file
-//            byte[] fileData = fileService.downloadFile(fileName);
-//            ByteArrayResource resource = new ByteArrayResource(fileData);
-//
-//            return ResponseEntity.ok()
-//                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-//                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
-//                    .body((Resource) resource);
-//        } catch (Exception e) {
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-//                    .body(null);
-//        }
-//    }
-
 
     private byte[] mergeChunks(byte[] existingFile, byte[] newChunk) {
         byte[] merged = new byte[existingFile.length + newChunk.length];
@@ -103,4 +73,47 @@ public class FileService {
         System.arraycopy(newChunk, 0, merged, existingFile.length, newChunk.length);
         return merged;
     }
+
+    public byte[] downloadFile(String fileName) throws Exception {
+        try {
+            // Retrieve file metadata to get the number of chunks
+            FileMetadata metadata = null;
+            List<FileMetadata> metadataList = fileMetadataRepository.findAllByName(fileName);
+
+            if (metadataList != null && !metadataList.isEmpty()) {
+                metadata = metadataList.get(metadataList.size() - 1); // Get the last element
+            }
+
+            if (metadata == null) {
+                throw new RuntimeException("File metadata not found.");
+            }
+
+            int totalChunks = metadata.getTotalChunks();
+            List<String> containers = List.of(storageContainers.split(","));
+
+            // Initialize an array to hold the merged file data
+            byte[] fileData = new byte[0];
+
+            // Download and decrypt each chunk, then merge them
+            for (int i = 0; i < totalChunks; i++) {
+                String targetContainer = loadBalancer.getNextContainer(containers);
+                byte[] encryptedChunk = storageClient.getChunk(targetContainer, fileName + "_chunk_" + i);
+
+                // Decrypt the chunk and ensure it is a byte array
+                byte[] decryptedChunk = AESUtils.decrypt(new String(encryptedChunk), encryptionKey);
+
+                if (decryptedChunk != null) {
+                    fileData = mergeChunks(fileData, decryptedChunk);
+                }
+            }
+
+            // Return the merged and decrypted file data
+            return fileData;
+        } catch (Exception e) {
+            System.out.println("Error during file download: " + e.getMessage());
+            throw new RuntimeException("Error during file download", e);
+        }
+    }
+
+
 }

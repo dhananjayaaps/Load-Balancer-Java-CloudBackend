@@ -20,9 +20,24 @@ public class StorageClient {
         }
     }
 
+    private String sanitizeContainerName(String container) {
+        // Replace any invalid characters in the container name with underscores
+        return container.replaceAll("[^a-zA-Z0-9]", "_");
+    }
+
     public void saveChunk(String container, String fileName, byte[] chunkData) {
-        // Define the file path
-        String filePath = storageDirectory + File.separator + fileName;
+        // Sanitize the container name to ensure it's valid for use in a file path
+        String sanitizedContainer = sanitizeContainerName(container);
+
+        // Define the container directory
+        String containerDir = storageDirectory + File.separator + sanitizedContainer;
+        File dir = new File(containerDir);
+        if (!dir.exists()) {
+            dir.mkdirs(); // Create container directory if it doesn't exist
+        }
+
+        // Define the file path to save the chunk
+        String filePath = containerDir + File.separator + fileName;
 
         try (FileOutputStream fos = new FileOutputStream(filePath)) {
             fos.write(chunkData); // Write the byte array to the file
@@ -32,13 +47,16 @@ public class StorageClient {
         }
     }
 
-    public byte[] getChunk(String fileName) {
-        // Define the file path
-        String filePath = storageDirectory + File.separator + fileName;
+    public byte[] getChunk(String container, String fileName) {
+        // Sanitize the container name to ensure it's valid for use in a file path
+        String sanitizedContainer = sanitizeContainerName(container);
+
+        // Construct the path to the file chunk in the container
+        String filePath = storageDirectory + File.separator + sanitizedContainer + File.separator + fileName;
 
         try (FileInputStream fis = new FileInputStream(filePath)) {
             byte[] chunkData = new byte[(int) new File(filePath).length()];
-            fis.read(chunkData); // Read the file content into the byte array
+            fis.read(chunkData);  // Read the file content into the byte array
             return chunkData;
         } catch (IOException e) {
             // Log and handle the error as needed

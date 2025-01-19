@@ -46,23 +46,23 @@ public class FileController {
         }
     }
 
-//    @GetMapping("/download")
-//    public ResponseEntity<byte[]> downloadFile(@RequestParam String fileName) {
-//        try {
-//            // Get the current authenticated user
-//            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//            User user = (User) authentication.getPrincipal();
-//
-//            // Check if the user is authorized to download the file
-//            // File access logic can be added here to verify the user's ownership or permissions
-//
-//            byte[] fileData = fileService.downloadFile(fileName);
-//            return ResponseEntity.ok(fileData);
-//        } catch (Exception e) {
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-//                    .body(null);
-//        }
-//    }
+    @GetMapping("/download")
+    public ResponseEntity<byte[]> downloadFile(@RequestParam String fileName) {
+        try {
+            // Get the current authenticated user
+            UserDetails userDetails = userDetailsService.getCurrentUser();
+            User user = userRepository.findByUsername(userDetails.getUsername()).get();
+
+            // Check if the user is authorized to download the file
+            // File access logic can be added here to verify the user's ownership or permissions
+
+            byte[] fileData = fileService.downloadFile(fileName);
+            return ResponseEntity.ok(fileData);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(null);
+        }
+    }
 
     @PostMapping("/share")
     public ResponseEntity<String> shareFile(@RequestParam Long fileId,
