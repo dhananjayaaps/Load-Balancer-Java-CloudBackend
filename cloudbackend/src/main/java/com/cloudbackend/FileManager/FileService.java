@@ -3,7 +3,9 @@ package com.cloudbackend.FileManager;
 import com.cloudbackend.entity.FileMetadata;
 import com.cloudbackend.entity.User;
 import com.cloudbackend.repository.FileMetadataRepository;
+import com.cloudbackend.service.TrafficMonitoringService;
 import com.cloudbackend.util.AESUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -22,16 +24,27 @@ public class FileService {
     private final StorageClient storageClient;
     private final LoadBalancer loadBalancer;
     private final FileMetadataRepository fileMetadataRepository;
+    private final TrafficController trafficController;
+    private final TrafficMonitoringService trafficMonitoringService;
 
-    public FileService(ChunkingService chunkingService, StorageClient storageClient, LoadBalancer loadBalancer, FileMetadataRepository fileMetadataRepository) {
+    @Autowired
+    public FileService(ChunkingService chunkingService, StorageClient storageClient, LoadBalancer loadBalancer, FileMetadataRepository fileMetadataRepository, TrafficController trafficController, TrafficMonitoringService trafficMonitoringService) {
         this.chunkingService = chunkingService;
         this.storageClient = storageClient;
         this.loadBalancer = loadBalancer;
         this.fileMetadataRepository = fileMetadataRepository;
+        this.trafficController = trafficController;
+        this.trafficMonitoringService = trafficMonitoringService;
     }
 
     public void uploadFile(String fileName, byte[] fileData, User owner, String schedulingAlgorithm, List<Integer> priorities) {
         try {
+            // Acquire a slot for upload
+            trafficController.acquireUploadSlot();
+
+            // Monitor and simulate traffic
+            trafficMonitoringService.monitorTrafficAndApplyDelay();
+
             // Split the file into chunks
             List<byte[]> chunks = chunkingService.splitFile(fileData, 1024);
 
@@ -59,8 +72,12 @@ public class FileService {
         } catch (Exception e) {
             System.out.println("Error during file upload: " + e.getMessage());
             throw new RuntimeException("Error during file upload", e);
+        } finally {
+            // Release the upload slot
+            trafficController.releaseUploadSlot();
         }
     }
+
 
 
     private byte[] mergeChunks(byte[] existingFile, byte[] newChunk) {
