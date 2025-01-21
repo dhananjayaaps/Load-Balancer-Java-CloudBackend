@@ -43,7 +43,6 @@ public class LoginController {
             showAlert(Alert.AlertType.ERROR, "Validation Error", "Username and password cannot be empty.");
             return;
         }
-
         try {
             // Create JSON request payload
             ObjectMapper objectMapper = new ObjectMapper();
@@ -62,14 +61,20 @@ public class LoginController {
 
             // Handle response
             if (response.statusCode() == 200) {
-                // Success
+                // Extract JWT token from the response
+                String jwtToken = response.body(); // Example: {"token":"<JWT_TOKEN>"}
+//                String jwtToken = objectMapper.readTree(responseBody).get("token").asText();
+
+                // Save the token for the whole application
+                ApplicationSession.setJwtToken(jwtToken);
+
+                // Show success alert
                 showAlert(Alert.AlertType.INFORMATION, "Login Success", "Welcome, " + username + "!");
             } else {
-                // Error handling
+                // Handle error response
                 showAlert(Alert.AlertType.ERROR, "Login Failed", "Invalid username or password.");
             }
         } catch (Exception e) {
-//            print in terminal
             e.printStackTrace();
             showAlert(Alert.AlertType.ERROR, "Error", "Failed to connect to the server: " + e.getMessage());
         }
