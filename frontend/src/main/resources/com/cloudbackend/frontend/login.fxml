@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" spacing="10.0"
+      xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cloudbackend.frontend.LoginController">
+   <children>
+      <!-- Title -->
+      <Label style="-fx-font-size: 24px; -fx-font-weight: bold;" text="Load Balancer Cloud" />
+
+      <!-- Username Field -->
+      <TextField fx:id="usernameField" maxWidth="300.0" prefWidth="329.0" promptText="Username">
+         <VBox.margin>
+            <Insets top="10.0" />
+         </VBox.margin>
+      </TextField>
+
+      <!-- Password Field -->
+      <PasswordField fx:id="passwordField" maxWidth="300.0" promptText="Password" />
+
+      <!-- Login Button -->
+      <Button fx:id="loginButton" maxWidth="100.0"
+              style="-fx-background-color: #4CAF50; -fx-text-fill: white;"
+              text="Login"
+              onAction="#handleLogin" />
+
+      <!-- Signup Navigation -->
+      <Button fx:id="signupButton" maxWidth="100.0"
+              style="-fx-background-color: #2196F3; -fx-text-fill: white;"
+              text="Signup"
+              onAction="#navigateToSignup" />
+   </children>
+   <padding>
+      <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+   </padding>
+</VBox>
