@@ -7,7 +7,8 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" spacing="10.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1">
+<VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" spacing="10.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.cloudbackend.frontend.SignupController">
    <children>
       <!-- Title -->
       <Label text="Signup - Load Balancer Cloud" style="-fx-font-size: 24px; -fx-font-weight: bold;" />
@@ -26,11 +27,15 @@
       <PasswordField fx:id="passwordField" promptText="Password" maxWidth="300.0" />
       
       <!-- Signup Button -->
-      <Button text="Signup" fx:id="signupButton" maxWidth="100.0" style="-fx-background-color: #4CAF50; -fx-text-fill: white;" />
+      <Button text="Signup" fx:id="signupButton" maxWidth="100.0" style="-fx-background-color: #4CAF50; -fx-text-fill: white;" onAction="#handleSignup"/>
       
       <!-- Login Navigation -->
-      <Button text="Back to Login" fx:id="loginButton" maxWidth="150.0" style="-fx-background-color: #2196F3; -fx-text-fill: white;" />
+      <Button text="Back to Login"
+              fx:id="loginButton"
+              maxWidth="150.0" style="-fx-background-color: #2196F3; -fx-text-fill: white;"
+              onAction="#navigateToLogin"/>
    </children>
+
    <padding>
       <Insets top="20.0" left="20.0" right="20.0" bottom="20.0" />
    </padding>

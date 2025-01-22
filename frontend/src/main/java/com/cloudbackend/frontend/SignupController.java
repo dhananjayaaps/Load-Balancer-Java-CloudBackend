@@ -19,7 +19,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
-public class LoginController {
+public class SignupController {
 
     @FXML
     private TextField usernameField;
@@ -28,17 +28,22 @@ public class LoginController {
     private PasswordField passwordField;
 
     @FXML
-    private Button loginButton;
+    private TextField nameField;
 
     @FXML
     private Button signupButton;
 
+    @FXML
+    private Button loginButton;
+
     private final String BASE_URL = "http://localhost:8080";
 
     @FXML
-    private void handleLogin(ActionEvent event) {
+    private void handleSignup(ActionEvent event) {
+        String name = nameField.getText();
         String username = usernameField.getText();
         String password = passwordField.getText();
+        String role = "USER";
 
         if (username.isEmpty() || password.isEmpty()) {
             showAlert(Alert.AlertType.ERROR, "Validation Error", "Username and password cannot be empty.");
@@ -47,11 +52,11 @@ public class LoginController {
         try {
             // Create JSON request payload
             ObjectMapper objectMapper = new ObjectMapper();
-            String requestBody = objectMapper.writeValueAsString(new LoginRequest(username, password));
+            String requestBody = objectMapper.writeValueAsString(new SignupRequest(name, username, password));
 
             // Create HTTP request
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(BASE_URL + "/auth/login"))
+                    .uri(URI.create(BASE_URL + "/users"))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                     .build();
@@ -62,18 +67,11 @@ public class LoginController {
 
             // Handle response
             if (response.statusCode() == 200) {
-                // Extract JWT token from the response
-                String jwtToken = response.body(); // Example: {"token":"<JWT_TOKEN>"}
-//                String jwtToken = objectMapper.readTree(responseBody).get("token").asText();
 
-                // Save the token for the whole application
-                ApplicationSession.setJwtToken(jwtToken);
-
-                // Show success alert
-                showAlert(Alert.AlertType.INFORMATION, "Login Success", "Welcome, " + username + "!");
+                showAlert(Alert.AlertType.INFORMATION, "Signup Success", "Please Login to continue!");
             } else {
                 // Handle error response
-                showAlert(Alert.AlertType.ERROR, "Login Failed", "Invalid username or password.");
+                showAlert(Alert.AlertType.ERROR, "Signup Failed", "Invalid username or password.");
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -82,9 +80,9 @@ public class LoginController {
     }
 
     @FXML
-    private void navigateToSignup(ActionEvent event) {
+    private void navigateToLogin(ActionEvent event) {
         try {
-            App.setRoot("signup");
+            App.setRoot("login");
         } catch (IOException e) {
             e.printStackTrace();
             showAlert(Alert.AlertType.ERROR, "Error", "Failed to load Signup page: " + e.getMessage());
@@ -100,15 +98,26 @@ public class LoginController {
         alert.showAndWait();
     }
 
-    class LoginRequest {
+    static class SignupRequest {
         @JsonProperty
         private String username;
         @JsonProperty
         private String password;
+        @JsonProperty
+        private String name;
+        @JsonProperty
+        private String role;
 
-        public LoginRequest(String username, String password) {
+
+        public SignupRequest(String name, String username, String password) {
             this.username = username;
             this.password = password;
+            this.name = name;
+            this.role = "USER";
+        }
+
+        public String getName() {
+            return name;
         }
 
         public String getUsername() {
