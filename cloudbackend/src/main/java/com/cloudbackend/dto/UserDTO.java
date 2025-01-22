@@ -10,6 +10,10 @@ import lombok.Setter;
 @Setter
 public class UserDTO {
 
+    @NotBlank(message = "Name is required")
+    @Size(min = 3, max = 50, message = "Name must be between 3 and 50 characters")
+    private final String name;
+
     @NotBlank(message = "Username is required")
     @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
     private final String username;
@@ -22,10 +26,15 @@ public class UserDTO {
     @Size(min = 8, max = 100, message = "Password must be between 8 and 100 characters")
     private final String password;
 
-    public UserDTO(String password, String username, String role) {
+    public UserDTO(String name, String password, String username, String role) {
+        this.name = name;
         this.username = username;
         this.role = role;
         this.password = password;
+    }
+
+    public String getName() {
+        return name;
     }
 
     public String getUsername() {

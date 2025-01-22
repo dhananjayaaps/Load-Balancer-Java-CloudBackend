@@ -24,7 +24,7 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public User createUser(String username, String password, String roleName) {
+    public User createUser(String name, String username, String password, String roleName) {
         if (userRepository.existsByUsername(username)) {
             throw new RuntimeException("User already exists");
         }
@@ -34,6 +34,7 @@ public class UserService {
         }
 
         User user = new User();
+        user.setName(name);
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(password));
         Set<Role> roles = new HashSet<>();
