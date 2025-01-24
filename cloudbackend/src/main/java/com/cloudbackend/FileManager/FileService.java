@@ -5,11 +5,14 @@ import com.cloudbackend.entity.User;
 import com.cloudbackend.repository.FileMetadataRepository;
 import com.cloudbackend.service.TrafficMonitoringService;
 import com.cloudbackend.util.AESUtils;
+import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 @Service
 public class FileService {
@@ -26,6 +29,7 @@ public class FileService {
     private final FileMetadataRepository fileMetadataRepository;
     private final TrafficController trafficController;
     private final TrafficMonitoringService trafficMonitoringService;
+    private final HealthCheck healthCheckService;
 
     @Autowired
     public FileService(
@@ -34,7 +38,7 @@ public class FileService {
             LoadBalancer loadBalancer,
             FileMetadataRepository fileMetadataRepository,
             TrafficController trafficController,
-            TrafficMonitoringService trafficMonitoringService
+            TrafficMonitoringService trafficMonitoringService, HealthCheck healthCheckService
     ) {
         this.chunkingService = chunkingService;
         this.storageClient = storageClient;
@@ -42,49 +46,81 @@ public class FileService {
         this.fileMetadataRepository = fileMetadataRepository;
         this.trafficController = trafficController;
         this.trafficMonitoringService = trafficMonitoringService;
+        this.healthCheckService = healthCheckService;
     }
 
-    public void uploadFile(String fileName, byte[] fileData, User owner, String schedulingAlgorithm, List<Integer> priorities) {
-        try {
-            // Determine priority and submit upload request
-            int priority = calculatePriority(owner, priorities);
-            trafficMonitoringService.incrementActiveRequests();
-            trafficController.submitRequest(priority, () -> {
-                try {
+    public void uploadFile(String fileName, byte[] fileData, User owner, String path, String schedulingAlgorithm, List<Integer> priorities) throws InterruptedException {
+        // Determine priority and submit upload request
+        int priority = calculatePriority(owner, priorities);
+        trafficMonitoringService.incrementActiveRequests();
 
-                    processUpload(fileName, fileData, owner, schedulingAlgorithm, priorities);
-                } catch (Exception e) {
-                    System.err.println("Error during upload processing: " + e.getMessage());
-                }
-//                trafficMonitoringService.incrementActiveRequests();
-            });
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("Request submission interrupted", e);
-        } finally {
+        // Check for healthy containers
+        List<String> healthyContainers = checkContainerHealth();
+        if (healthyContainers.isEmpty()) {
             trafficMonitoringService.decrementActiveRequests();
+            throw new RuntimeException("No healthy storage containers available.");
         }
+
+        // Use CountDownLatch to wait for task completion
+        CountDownLatch latch = new CountDownLatch(1);
+
+        trafficController.submitRequest(priority, () -> {
+            try {
+                processUpload(fileName, fileData, owner, path, schedulingAlgorithm, priorities);
+            } catch (Exception e) {
+                System.err.println("Error during upload processing: " + e.getMessage());
+                throw new RuntimeException("Failed to process file upload: " + e.getMessage(), e);
+            } finally {
+                latch.countDown(); // Signal completion
+            }
+        });
+
+        latch.await();
+
+        trafficMonitoringService.decrementActiveRequests();
     }
 
-    private void processUpload(String fileName, byte[] fileData, User owner, String schedulingAlgorithm, List<Integer> priorities) throws Exception {
-
-        TrafficEmulator.applyTrafficEmulatedDelay(trafficMonitoringService.determineTrafficLevel());
-
-        List<byte[]> chunks = chunkingService.splitFile(fileData, 1024);
-
+    // Method to check the health of containers
+    private List<String> checkContainerHealth() {
         List<String> containers = List.of(storageContainers.split(","));
+        return containers.stream()
+                .filter(container -> healthCheckService.checkContainerHealth(container))
+                .toList();
+    }
 
-        // Save file metadata
-        FileMetadata metadata = new FileMetadata(fileName, "path/to/file", (long) fileData.length, owner);
-        metadata.setTotalChunks(chunks.size());
-        fileMetadataRepository.save(metadata);
 
-        // Encrypt and upload chunks
-        for (int i = 0; i < chunks.size(); i++) {
-            String encryptedChunk = AESUtils.encrypt(chunks.get(i), encryptionKey);
-            String targetContainer = loadBalancer.handleTraffic(containers, schedulingAlgorithm, priorities);
-            storageClient.saveChunk(targetContainer, fileName + "_chunk_" + i, encryptedChunk.getBytes());
+
+    private void processUpload(String fileName, byte[] fileData, User owner, String path, String schedulingAlgorithm, List<Integer> priorities) throws Exception {
+        try {
+            trafficController.acquireUploadSlot();
+            
+            TrafficEmulator.applyTrafficEmulatedDelay(trafficMonitoringService.determineTrafficLevel());
+
+            List<byte[]> chunks = chunkingService.splitFile(fileData, 1024);
+
+            List<String> containers = List.of(storageContainers.split(","));
+
+            String savePath = "/" + owner.getName() + (path != null ? path : "");
+            // Save file metadata
+            FileMetadata metadata = new FileMetadata(fileName, savePath, (long) fileData.length, owner);
+            metadata.setTotalChunks(chunks.size());
+            fileMetadataRepository.save(metadata);
+
+            // Encrypt and upload chunks
+            for (int i = 0; i < chunks.size(); i++) {
+                String encryptedChunk = AESUtils.encrypt(chunks.get(i), encryptionKey);
+                String targetContainer = loadBalancer.handleTraffic(containers, schedulingAlgorithm, priorities);
+                storageClient.saveChunk(targetContainer, fileName + "_chunk_" + i, encryptedChunk.getBytes());
+            }
         }
+        catch (Exception e) {
+            System.err.println("Error during file upload: " + e.getMessage());
+            throw new Exception("Failed to process file upload: " + e.getMessage(), e);
+        }
+        finally {
+            trafficController.releaseUploadSlot();
+        }
+
     }
 
     private int calculatePriority(User owner, List<Integer> priorities) {
@@ -132,5 +168,10 @@ public class FileService {
             System.err.println("Error during file download: " + e.getMessage());
             throw new RuntimeException("Error during file download", e);
         }
+    }
+
+    public String getFilesByOwner(Long id) {
+        List<FileMetadata> files = fileMetadataRepository.findByOwner_Id(id);
+        return files.toString();
     }
 }

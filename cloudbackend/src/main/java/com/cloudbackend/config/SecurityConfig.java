@@ -45,6 +45,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers( "/auth/**", "/health").permitAll()
                         .requestMatchers("/users/**").permitAll()
+                        .requestMatchers("/files/myfiles").authenticated()
                         .requestMatchers("/files/**").permitAll()
                 )
 //                .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthenticationEntryPoint))

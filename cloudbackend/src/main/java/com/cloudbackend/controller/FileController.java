@@ -30,14 +30,14 @@ public class FileController {
     }
 
     @PostMapping("/upload")
-    public ResponseEntity<String> uploadFile(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<String> uploadFile(@RequestParam("file") MultipartFile file, @RequestParam("path") String path) {
         try {
 
             UserDetails userDetails = userDetailsService.getCurrentUser();
             User user = userRepository.findByUsername(userDetails.getUsername()).get();
 
             // Process file upload
-            fileService.uploadFile(file.getOriginalFilename(), file.getBytes(), user, "RR", null);
+            fileService.uploadFile(file.getOriginalFilename(), file.getBytes(), user, path ,"RR", null);
 
             return ResponseEntity.ok("File uploaded successfully");
         } catch (Exception e) {
@@ -75,6 +75,21 @@ public class FileController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error sharing file: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/myfiles")
+    public ResponseEntity<String> getMyFiles() {
+        try {
+            UserDetails userDetails = userDetailsService.getCurrentUser();
+            User user = userRepository.findByUsername(userDetails.getUsername()).get();
+
+            // Get files owned by the current user
+            String files = fileService.getFilesByOwner(user.getId());
+            return ResponseEntity.ok(files);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error retrieving files: " + e.getMessage());
         }
     }
 }

@@ -20,7 +20,7 @@ public class HealthCheck {
         }
     }
 
-    private boolean checkContainerHealth(String containerUrl) {
+    boolean checkContainerHealth(String containerUrl) {
         try {
             URL url = new URL(containerUrl + "/");
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
