@@ -13,6 +13,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/files")
 public class FileController {
@@ -84,12 +86,13 @@ public class FileController {
             UserDetails userDetails = userDetailsService.getCurrentUser();
             User user = userRepository.findByUsername(userDetails.getUsername()).get();
 
-            // Get files owned by the current user
-            String files = fileService.getFilesByOwner(user.getId());
-            return ResponseEntity.ok(files);
+            List<String> filePaths = fileService.getFilePathsByOwner(user.getId());
+            return ResponseEntity.ok(filePaths.toString());
+
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error retrieving files: " + e.getMessage());
         }
     }
+
 }

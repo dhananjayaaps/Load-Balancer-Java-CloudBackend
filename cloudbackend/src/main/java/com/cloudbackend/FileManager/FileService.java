@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.Collectors;
 
 @Service
 public class FileService {
@@ -49,7 +50,7 @@ public class FileService {
         this.healthCheckService = healthCheckService;
     }
 
-    public void uploadFile(String fileName, byte[] fileData, User owner, String path, String schedulingAlgorithm, List<Integer> priorities) throws InterruptedException {
+    public void uploadFile(String fileNameOriginal, byte[] fileData, User owner, String path, String schedulingAlgorithm, List<Integer> priorities) throws InterruptedException {
         // Determine priority and submit upload request
         int priority = calculatePriority(owner, priorities);
         trafficMonitoringService.incrementActiveRequests();
@@ -61,12 +62,17 @@ public class FileService {
             throw new RuntimeException("No healthy storage containers available.");
         }
 
+//        make a random value to add to the file name
+        String randomValue = String.valueOf((int) (Math.random() * 1000));
+
+        String fileName = owner.getUsername() + "_" + randomValue + "_"+ fileNameOriginal;
+
         // Use CountDownLatch to wait for task completion
         CountDownLatch latch = new CountDownLatch(1);
 
         trafficController.submitRequest(priority, () -> {
             try {
-                processUpload(fileName, fileData, owner, path, schedulingAlgorithm, priorities);
+                processUpload(fileNameOriginal, fileName, fileData, owner, path, schedulingAlgorithm, priorities);
             } catch (Exception e) {
                 System.err.println("Error during upload processing: " + e.getMessage());
                 throw new RuntimeException("Failed to process file upload: " + e.getMessage(), e);
@@ -90,7 +96,7 @@ public class FileService {
 
 
 
-    private void processUpload(String fileName, byte[] fileData, User owner, String path, String schedulingAlgorithm, List<Integer> priorities) throws Exception {
+    private void processUpload(String fileNameOriginal, String fileName, byte[] fileData, User owner, String path, String schedulingAlgorithm, List<Integer> priorities) throws Exception {
         try {
             trafficController.acquireUploadSlot();
             
@@ -100,7 +106,7 @@ public class FileService {
 
             List<String> containers = List.of(storageContainers.split(","));
 
-            String savePath = "/" + owner.getName() + (path != null ? path : "");
+            String savePath = "/" + owner.getUsername() + path + "/" + fileNameOriginal;
             // Save file metadata
             FileMetadata metadata = new FileMetadata(fileName, savePath, (long) fileData.length, owner);
             metadata.setTotalChunks(chunks.size());
@@ -173,5 +179,13 @@ public class FileService {
     public String getFilesByOwner(Long id) {
         List<FileMetadata> files = fileMetadataRepository.findByOwner_Id(id);
         return files.toString();
+    }
+
+    public List<String> getFilePathsByOwner(Long ownerId) {
+        List<FileMetadata> files = fileMetadataRepository.findByOwner_Id(ownerId);
+        // Extract the file paths from the metadata
+        return files.stream()
+                .map(FileMetadata::getPath)
+                .collect(Collectors.toList());
     }
 }
