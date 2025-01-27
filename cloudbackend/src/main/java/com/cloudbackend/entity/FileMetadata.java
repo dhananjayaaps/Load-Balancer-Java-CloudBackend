@@ -21,6 +21,9 @@ public class FileMetadata {
     @Column(nullable = false)
     private Long size; // File size in bytes
 
+    @Column(nullable = false)
+    private Character mimeType = 'f';
+
     @ManyToOne
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner; // The user who owns this file
