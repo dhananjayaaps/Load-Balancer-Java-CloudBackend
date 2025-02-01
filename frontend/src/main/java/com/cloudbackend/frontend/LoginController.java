@@ -71,6 +71,7 @@ public class LoginController {
 
                 // Show success alert
                 showAlert(Alert.AlertType.INFORMATION, "Login Success", "Welcome, " + username + "!");
+                App.setRoot("FileExplorerView");
             } else {
                 // Handle error response
                 showAlert(Alert.AlertType.ERROR, "Login Failed", "Invalid username or password.");
