@@ -1,6 +1,9 @@
 package com.cloudbackend.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.List;
 
 @Entity
@@ -31,6 +34,17 @@ public class FileMetadata {
     @OneToMany(mappedBy = "file", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FilePermission> permissions; // List of permissions for this file
 
+    // Add getters and setters
+    @Setter
+    @Getter
+    @Column(nullable = false)
+    private boolean othersCanRead = false;
+
+    @Setter
+    @Getter
+    @Column(nullable = false)
+    private boolean othersCanWrite = false;
+
     public FileMetadata() {
     }
 
@@ -39,6 +53,16 @@ public class FileMetadata {
         this.path = path;
         this.size = size;
         this.owner = owner;
+    }
+
+    public FileMetadata(String name, String path, Long size, User owner,
+                        boolean othersCanRead, boolean othersCanWrite) {
+        this.name = name;
+        this.path = path;
+        this.size = size;
+        this.owner = owner;
+        this.othersCanRead = othersCanRead;
+        this.othersCanWrite = othersCanWrite;
     }
 
     public Long getId() {

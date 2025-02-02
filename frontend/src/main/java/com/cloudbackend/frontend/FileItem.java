@@ -25,6 +25,17 @@ public class FileItem {
         return isDirectory;
     }
 
+    // Check if the user has read permission
+    public boolean canRead() {
+        System.out.println(permissions);
+        return permissions.contains("r");
+    }
+
+    // Check if the user has write permission
+    public boolean canWrite() {
+        return permissions.contains("w");
+    }
+
     @Override
     public String toString() {
         return path;

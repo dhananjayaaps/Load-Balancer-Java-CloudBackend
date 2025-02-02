@@ -99,7 +99,7 @@ public class FileService {
     private void processUpload(String fileNameOriginal, String fileName, byte[] fileData, User owner, String path, String schedulingAlgorithm, List<Integer> priorities) throws Exception {
         try {
             trafficController.acquireUploadSlot();
-            
+
             TrafficEmulator.applyTrafficEmulatedDelay(trafficMonitoringService.determineTrafficLevel());
 
             List<byte[]> chunks = chunkingService.splitFile(fileData, 1024);
@@ -107,7 +107,10 @@ public class FileService {
             List<String> containers = List.of(storageContainers.split(","));
 
             String savePath = "/" + owner.getUsername() + path + "/" + fileNameOriginal;
-            // Save file metadata
+            // Normalize the path to avoid duplicates or invalid formats
+            savePath = savePath.replaceAll("/+", "/"); // Replace multiple slashes with one
+            savePath = savePath.replaceAll("/$", ""); // Remove trailing slash
+
             FileMetadata metadata = new FileMetadata(fileName, savePath, (long) fileData.length, owner);
             metadata.setTotalChunks(chunks.size());
             fileMetadataRepository.save(metadata);
@@ -141,28 +144,25 @@ public class FileService {
         return merged;
     }
 
-    public byte[] downloadFile(String fileName) throws Exception {
+    public byte[] downloadFile(String filePath) throws Exception {
         try {
-            // Retrieve metadata for the file
-            FileMetadata metadata = fileMetadataRepository.findAllByName(fileName)
-                    .stream()
-                    .reduce((first, second) -> second) // Get the last metadata entry
-                    .orElseThrow(() -> new RuntimeException("File metadata not found."));
+            // Retrieve metadata by path
+            FileMetadata metadata = fileMetadataRepository.findByPath(filePath)
+                    .orElseThrow(() -> new RuntimeException("File metadata not found for path: " + filePath));
 
             trafficController.acquireDownloadSlot();
 
             int totalChunks = metadata.getTotalChunks();
             List<String> containers = List.of(storageContainers.split(","));
 
-            // Initialize byte array for the merged file
             byte[] fileData = new byte[0];
 
-            // Download and decrypt each chunk
+            // Use metadata.getName() to construct chunk names
             for (int i = 0; i < totalChunks; i++) {
                 String targetContainer = loadBalancer.getNextContainer(containers);
-                byte[] encryptedChunk = storageClient.getChunk(targetContainer, fileName + "_chunk_" + i);
+                String chunkName = metadata.getName() + "_chunk_" + i; // Use the generated filename
+                byte[] encryptedChunk = storageClient.getChunk(targetContainer, chunkName);
 
-                // Decrypt and merge the chunk
                 byte[] decryptedChunk = AESUtils.decrypt(new String(encryptedChunk), encryptionKey);
                 if (decryptedChunk != null) {
                     fileData = mergeChunks(fileData, decryptedChunk);

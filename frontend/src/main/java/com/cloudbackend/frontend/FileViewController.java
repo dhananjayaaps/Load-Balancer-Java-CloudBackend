@@ -52,10 +52,19 @@ public class FileViewController {
         fileTreeView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != null) {
                 String path = newValue.getValue();
-                if (!newValue.isLeaf()) {
-                    fileContentArea.clear();
-                } else {
-                    loadFileContent(path);
+                FileItem fileItem = findFileItemByPath(path);
+                System.out.println(fileItem.canWrite());
+                assert fileItem != null;
+
+                if (fileItem != null) {
+                    if (fileItem.isDirectory()) {
+                        fileContentArea.clear();
+                    } else if (fileItem.canRead()) {
+                        loadFileContent(path);
+                    } else {
+                        fileContentArea.setText("Access Denied: You do not have read permission for this file.");
+                        fileContentArea.setDisable(true); // Disable editing
+                    }
                 }
             }
         });
@@ -66,12 +75,36 @@ public class FileViewController {
         createDirectoryButton.setOnAction(event -> createDirectory());
     }
 
+    private FileItem findFileItemByPath(String path) {
+        for (TreeItem<String> item : rootItem.getChildren()) {
+            FileItem fileItem = findFileItemRecursive(item, path);
+            if (fileItem != null) {
+                return fileItem;
+            }
+        }
+        return null;
+    }
+
+    private FileItem findFileItemRecursive(TreeItem<String> item, String path) {
+        if (item.getValue().equals(path)) {
+            return new FileItem(path, Arrays.asList("r", "w"), item.isLeaf()); // Adjust permissions as needed
+        }
+        for (TreeItem<String> child : item.getChildren()) {
+            FileItem found = findFileItemRecursive(child, path);
+            if (found != null) {
+                return found;
+            }
+        }
+        return null;
+    }
+
+
     private void loadPaths() {
         List<FileItem> fileItems = Arrays.asList(
                 new FileItem("/admin/documents/Hi.txt", Arrays.asList("r", "w"), false),
                 new FileItem("/admin/downloads/new/Hi.txt", Arrays.asList("r", "w"), false),
                 new FileItem("/admin/downloads/new", Arrays.asList("r", "w"), true),
-                new FileItem("/alex/downloads/new", Arrays.asList("r", "w"), true)
+                new FileItem("/alex/downloads/new", Arrays.asList(), true)
         );
 
         for (FileItem item : fileItems) {
@@ -119,10 +152,16 @@ public class FileViewController {
         }
 
         String path = selectedItem.getValue();
-        try {
-            Files.write(Paths.get(path), fileContentArea.getText().getBytes());
-        } catch (IOException e) {
-            new Alert(AlertType.ERROR, "Error saving file: " + e.getMessage()).show();
+        FileItem fileItem = findFileItemByPath(path);
+
+        if (fileItem != null && fileItem.canWrite()) {
+            try {
+                Files.write(Paths.get(path), fileContentArea.getText().getBytes());
+            } catch (IOException e) {
+                new Alert(AlertType.ERROR, "Error saving file: " + e.getMessage()).show();
+            }
+        } else {
+            new Alert(AlertType.ERROR, "Access Denied: You do not have write permission for this file.").show();
         }
     }
 
@@ -130,11 +169,17 @@ public class FileViewController {
         TreeItem<String> selectedItem = fileTreeView.getSelectionModel().getSelectedItem();
         if (selectedItem != null) {
             String path = selectedItem.getValue();
-            try {
-                Files.deleteIfExists(Paths.get(path));
-                selectedItem.getParent().getChildren().remove(selectedItem);
-            } catch (IOException e) {
-                new Alert(AlertType.ERROR, "Error deleting file: " + e.getMessage()).show();
+            FileItem fileItem = findFileItemByPath(path);
+
+            if (fileItem != null && fileItem.canWrite()) {
+                try {
+                    Files.deleteIfExists(Paths.get(path));
+                    selectedItem.getParent().getChildren().remove(selectedItem);
+                } catch (IOException e) {
+                    new Alert(AlertType.ERROR, "Error deleting file: " + e.getMessage()).show();
+                }
+            } else {
+                new Alert(AlertType.ERROR, "Access Denied: You do not have write permission for this file/directory.").show();
             }
         }
     }
@@ -149,13 +194,19 @@ public class FileViewController {
             TreeItem<String> selectedItem = fileTreeView.getSelectionModel().getSelectedItem();
             if (selectedItem != null) {
                 String parentPath = selectedItem.getValue();
-                String newFilePath = parentPath + "/" + fileName;
+                FileItem parentItem = findFileItemByPath(parentPath);
 
-                try {
-                    Files.createFile(Paths.get(newFilePath));
-                    addFileItemToTree(new FileItem(newFilePath, Arrays.asList("r", "w"), false));
-                } catch (IOException e) {
-                    new Alert(AlertType.ERROR, "Error creating file: " + e.getMessage()).show();
+                if (parentItem != null && parentItem.canWrite()) {
+                    String newFilePath = parentPath + "/" + fileName;
+
+                    try {
+                        Files.createFile(Paths.get(newFilePath));
+                        addFileItemToTree(new FileItem(newFilePath, Arrays.asList("r", "w"), false));
+                    } catch (IOException e) {
+                        new Alert(AlertType.ERROR, "Error creating file: " + e.getMessage()).show();
+                    }
+                } else {
+                    new Alert(AlertType.ERROR, "Access Denied: You do not have write permission for this location.").show();
                 }
             }
         });
@@ -171,15 +222,22 @@ public class FileViewController {
             TreeItem<String> selectedItem = fileTreeView.getSelectionModel().getSelectedItem();
             if (selectedItem != null) {
                 String parentPath = selectedItem.getValue();
-                String newDirPath = parentPath + "/" + dirName;
+                FileItem parentItem = findFileItemByPath(parentPath);
 
-                try {
-                    Files.createDirectory(Paths.get(newDirPath));
-                    addFileItemToTree(new FileItem(newDirPath, Arrays.asList("r", "w"), true));
-                } catch (IOException e) {
-                    new Alert(AlertType.ERROR, "Error creating directory: " + e.getMessage()).show();
+                if (parentItem != null && parentItem.canWrite()) {
+                    String newDirPath = parentPath + "/" + dirName;
+
+                    try {
+                        Files.createDirectory(Paths.get(newDirPath));
+                        addFileItemToTree(new FileItem(newDirPath, Arrays.asList("r", "w"), true));
+                    } catch (IOException e) {
+                        new Alert(AlertType.ERROR, "Error creating directory: " + e.getMessage()).show();
+                    }
+                } else {
+                    new Alert(AlertType.ERROR, "Access Denied: You do not have write permission for this location.").show();
                 }
             }
         });
     }
+
 }
