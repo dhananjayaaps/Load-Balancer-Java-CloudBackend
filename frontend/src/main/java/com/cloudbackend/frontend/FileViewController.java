@@ -8,13 +8,9 @@ import javafx.scene.control.Button;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
+import com.cloudbackend.frontend.ApiClient;
+import com.cloudbackend.frontend.FileDTO;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -46,118 +42,69 @@ public class FileViewController {
         rootItem.setExpanded(true);
         fileTreeView.setRoot(rootItem);
 
-        // Load predefined paths
-        loadPaths();
+        // Load files from backend
+        loadFilesFromBackend("/");
 
         fileTreeView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != null) {
                 String path = newValue.getValue();
-                FileItem fileItem = findFileItemByPath(path);
-                System.out.println(fileItem.canWrite());
-                assert fileItem != null;
+                FileDTO file = findFileByPath(path);
 
-                if (fileItem != null) {
-                    if (fileItem.isDirectory()) {
+                if (file != null) {
+                    if (file.isDirectory()) {
                         fileContentArea.clear();
-                    } else if (fileItem.canRead()) {
-                        loadFileContent(path);
+                    } else if (file.isCanRead()) {
+                        loadFileContentFromBackend(path);
                     } else {
                         fileContentArea.setText("Access Denied: You do not have read permission for this file.");
-                        fileContentArea.setDisable(true); // Disable editing
+                        fileContentArea.setDisable(true);
                     }
                 }
             }
         });
 
-        saveButton.setOnAction(event -> saveFileContent());
-        deleteButton.setOnAction(event -> deleteSelectedItem());
-        createFileButton.setOnAction(event -> createFile());
-        createDirectoryButton.setOnAction(event -> createDirectory());
+        saveButton.setOnAction(event -> saveFileContentToBackend());
+        deleteButton.setOnAction(event -> deleteSelectedItemFromBackend());
+        createFileButton.setOnAction(event -> createFileOnBackend());
+        createDirectoryButton.setOnAction(event -> createDirectoryOnBackend());
     }
 
-    private FileItem findFileItemByPath(String path) {
-        for (TreeItem<String> item : rootItem.getChildren()) {
-            FileItem fileItem = findFileItemRecursive(item, path);
-            if (fileItem != null) {
-                return fileItem;
-            }
-        }
-        return null;
-    }
-
-    private FileItem findFileItemRecursive(TreeItem<String> item, String path) {
-        if (item.getValue().equals(path)) {
-            return new FileItem(path, Arrays.asList("r", "w"), item.isLeaf()); // Adjust permissions as needed
-        }
-        for (TreeItem<String> child : item.getChildren()) {
-            FileItem found = findFileItemRecursive(child, path);
-            if (found != null) {
-                return found;
-            }
-        }
-        return null;
-    }
-
-
-    private void loadPaths() {
-        List<FileItem> fileItems = Arrays.asList(
-                new FileItem("/admin/documents/Hi.txt", Arrays.asList("r", "w"), false),
-                new FileItem("/admin/downloads/new/Hi.txt", Arrays.asList("r", "w"), false),
-                new FileItem("/admin/downloads/new", Arrays.asList("r", "w"), true),
-                new FileItem("/alex/downloads/new", Arrays.asList(), true)
-        );
-
-        for (FileItem item : fileItems) {
-            addFileItemToTree(item);
-        }
-    }
-
-    private void addFileItemToTree(FileItem fileItem) {
-        String[] parts = fileItem.getPath().split("/");
-        TreeItem<String> currentItem = rootItem;
-
-        for (String part : parts) {
-            if (part.isEmpty()) continue;
-
-            TreeItem<String> foundItem = null;
-            for (TreeItem<String> child : currentItem.getChildren()) {
-                if (child.getValue().equals(part)) {
-                    foundItem = child;
-                    break;
-                }
-            }
-
-            if (foundItem == null) {
-                foundItem = new TreeItem<>(part);
-                currentItem.getChildren().add(foundItem);
-            }
-
-            currentItem = foundItem;
-        }
-    }
-
-    private void loadFileContent(String path) {
+    private void loadFilesFromBackend(String path) {
         try {
-            String content = new String(Files.readAllBytes(Paths.get(path)));
-            fileContentArea.setText(content);
-        } catch (IOException e) {
+            List<FileDTO> files = ApiClient.listFiles(path);
+            for (FileDTO file : files) {
+                addFileItemToTree(file);
+            }
+        } catch (Exception e) {
+            new Alert(AlertType.ERROR, "Error loading files: " + e.getMessage()).show();
+        }
+    }
+
+    private void loadFileContentFromBackend(String path) {
+        try {
+            byte[] fileData = ApiClient.downloadFile(path);
+            if (fileData != null) {
+                fileContentArea.setText(new String(fileData));
+            }
+        } catch (Exception e) {
             fileContentArea.setText("Error reading file: " + e.getMessage());
         }
     }
 
-    private void saveFileContent() {
+    private void saveFileContentToBackend() {
         TreeItem<String> selectedItem = fileTreeView.getSelectionModel().getSelectedItem();
         if (selectedItem != null && !selectedItem.isLeaf()) {
             return;
         }
 
         String path = selectedItem.getValue();
-        FileItem fileItem = findFileItemByPath(path);
+        FileDTO file = findFileByPath(path);
 
-        if (fileItem != null && fileItem.canWrite()) {
+        if (file != null && file.isCanWrite()) {
             try {
-                Files.write(Paths.get(path), fileContentArea.getText().getBytes());
-            } catch (IOException e) {
+                ApiClient.saveFile(path, fileContentArea.getText());
+                new Alert(AlertType.INFORMATION, "File saved successfully").show();
+            } catch (Exception e) {
                 new Alert(AlertType.ERROR, "Error saving file: " + e.getMessage()).show();
             }
         } else {
@@ -165,18 +112,19 @@ public class FileViewController {
         }
     }
 
-    private void deleteSelectedItem() {
+    private void deleteSelectedItemFromBackend() {
         TreeItem<String> selectedItem = fileTreeView.getSelectionModel().getSelectedItem();
         if (selectedItem != null) {
             String path = selectedItem.getValue();
-            FileItem fileItem = findFileItemByPath(path);
+            FileDTO file = findFileByPath(path);
 
-            if (fileItem != null && fileItem.canWrite()) {
+            if (file != null && file.isCanWrite()) {
                 try {
-                    Files.deleteIfExists(Paths.get(path));
+                    ApiClient.deleteFileOrDirectory(path);
                     selectedItem.getParent().getChildren().remove(selectedItem);
-                } catch (IOException e) {
-                    new Alert(AlertType.ERROR, "Error deleting file: " + e.getMessage()).show();
+                    new Alert(AlertType.INFORMATION, "Deleted successfully").show();
+                } catch (Exception e) {
+                    new Alert(AlertType.ERROR, "Error deleting: " + e.getMessage()).show();
                 }
             } else {
                 new Alert(AlertType.ERROR, "Access Denied: You do not have write permission for this file/directory.").show();
@@ -184,7 +132,7 @@ public class FileViewController {
         }
     }
 
-    private void createFile() {
+    private void createFileOnBackend() {
         TextInputDialog dialog = new TextInputDialog();
         dialog.setTitle("Create File");
         dialog.setHeaderText("Enter the file name:");
@@ -194,15 +142,13 @@ public class FileViewController {
             TreeItem<String> selectedItem = fileTreeView.getSelectionModel().getSelectedItem();
             if (selectedItem != null) {
                 String parentPath = selectedItem.getValue();
-                FileItem parentItem = findFileItemByPath(parentPath);
+                FileDTO parentFile = findFileByPath(parentPath);
 
-                if (parentItem != null && parentItem.canWrite()) {
-                    String newFilePath = parentPath + "/" + fileName;
-
+                if (parentFile != null && parentFile.isCanWrite()) {
                     try {
-                        Files.createFile(Paths.get(newFilePath));
-                        addFileItemToTree(new FileItem(newFilePath, Arrays.asList("r", "w"), false));
-                    } catch (IOException e) {
+                        ApiClient.createFile(parentPath, fileName);
+                        loadFilesFromBackend(parentPath); // Refresh the list
+                    } catch (Exception e) {
                         new Alert(AlertType.ERROR, "Error creating file: " + e.getMessage()).show();
                     }
                 } else {
@@ -212,7 +158,7 @@ public class FileViewController {
         });
     }
 
-    private void createDirectory() {
+    private void createDirectoryOnBackend() {
         TextInputDialog dialog = new TextInputDialog();
         dialog.setTitle("Create Directory");
         dialog.setHeaderText("Enter the directory name:");
@@ -222,15 +168,13 @@ public class FileViewController {
             TreeItem<String> selectedItem = fileTreeView.getSelectionModel().getSelectedItem();
             if (selectedItem != null) {
                 String parentPath = selectedItem.getValue();
-                FileItem parentItem = findFileItemByPath(parentPath);
+                FileDTO parentFile = findFileByPath(parentPath);
 
-                if (parentItem != null && parentItem.canWrite()) {
-                    String newDirPath = parentPath + "/" + dirName;
-
+                if (parentFile != null && parentFile.isCanWrite()) {
                     try {
-                        Files.createDirectory(Paths.get(newDirPath));
-                        addFileItemToTree(new FileItem(newDirPath, Arrays.asList("r", "w"), true));
-                    } catch (IOException e) {
+                        ApiClient.createDirectory(parentPath, dirName);
+                        loadFilesFromBackend(parentPath); // Refresh the list
+                    } catch (Exception e) {
                         new Alert(AlertType.ERROR, "Error creating directory: " + e.getMessage()).show();
                     }
                 } else {
@@ -240,4 +184,12 @@ public class FileViewController {
         });
     }
 
+    private com.cloudbackend.frontend.FileDTO findFileByPath(String path) {
+        // Implement logic to find a file by path in the tree
+        return null; // Placeholder
+    }
+
+    private void addFileItemToTree(com.cloudbackend.frontend.FileDTO file) {
+        // Implement logic to add a file to the tree
+    }
 }

@@ -4,6 +4,8 @@ module com.cloudbackend.frontend {
     requires com.fasterxml.jackson.databind;
     requires java.net.http;
     requires java.desktop;
+    requires org.apache.httpcomponents.httpcore;
+    requires spring.web;
 
     // Open package to both JavaFX and Jackson
     opens com.cloudbackend.frontend to javafx.fxml, com.fasterxml.jackson.databind;
