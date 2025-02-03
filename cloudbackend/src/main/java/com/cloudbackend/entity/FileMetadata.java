@@ -6,6 +6,8 @@ import lombok.Setter;
 
 import java.util.List;
 
+@Getter
+@Setter
 @Entity
 public class FileMetadata {
 
@@ -34,16 +36,14 @@ public class FileMetadata {
     @OneToMany(mappedBy = "file", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FilePermission> permissions; // List of permissions for this file
 
-    // Add getters and setters
-    @Setter
-    @Getter
     @Column(nullable = false)
     private boolean othersCanRead = false;
 
-    @Setter
-    @Getter
     @Column(nullable = false)
     private boolean othersCanWrite = false;
+
+    @Column(nullable = false)
+    private boolean isDirectory = false;
 
     public FileMetadata() {
     }
@@ -65,59 +65,24 @@ public class FileMetadata {
         this.othersCanWrite = othersCanWrite;
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
+    public FileMetadata(String name, String path, Long size, User owner,
+                        boolean othersCanRead, boolean othersCanWrite, boolean isDirectory) {
         this.name = name;
-    }
-
-    public String getPath() {
-        return path;
-    }
-
-    public void setPath(String path) {
         this.path = path;
-    }
-
-    public Long getSize() {
-        return size;
-    }
-
-    public void setSize(Long size) {
         this.size = size;
-    }
-
-    public User getOwner() {
-        return owner;
-    }
-
-    public void setOwner(User owner) {
         this.owner = owner;
+        this.othersCanRead = othersCanRead;
+        this.othersCanWrite = othersCanWrite;
+        this.isDirectory = isDirectory;
     }
 
-    public List<FilePermission> getPermissions() {
-        return permissions;
+    // Add getter and setter for isDirectory
+    public boolean isDirectory() {
+        return isDirectory;
     }
 
-    public void setPermissions(List<FilePermission> permissions) {
-        this.permissions = permissions;
+    public void setDirectory(boolean directory) {
+        isDirectory = directory;
     }
 
-    public int getTotalChunks() {
-        return totalChunks;
-    }
-
-    public void setTotalChunks(int totalChunks) {
-        this.totalChunks = totalChunks;
-    }
 }

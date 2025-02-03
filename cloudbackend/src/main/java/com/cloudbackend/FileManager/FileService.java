@@ -4,6 +4,8 @@ import com.cloudbackend.dto.FileDTO;
 import com.cloudbackend.entity.FileMetadata;
 import com.cloudbackend.entity.FilePermission;
 import com.cloudbackend.entity.User;
+import com.cloudbackend.exception.PermissionDeniedException;
+import com.cloudbackend.exception.ResourceNotFoundException;
 import com.cloudbackend.repository.FileMetadataRepository;
 import com.cloudbackend.service.TrafficMonitoringService;
 import com.cloudbackend.util.AESUtils;
@@ -206,7 +208,8 @@ public class FileService {
                         true,  // owner always has access
                         true,
                         file.isOthersCanRead(),
-                        file.isOthersCanWrite()
+                        file.isOthersCanWrite(),
+                        file.isDirectory()
                 )
         ).collect(Collectors.toList());
     }
@@ -219,17 +222,81 @@ public class FileService {
         fileMetadataRepository.save(file);
     }
 
+
+    public List<FileDTO> listFiles(String path, User user) {
+        List<FileMetadata> files = fileMetadataRepository.findByPathStartingWith(path);
+        return files.stream()
+                .filter(file -> hasReadAccess(file, user))
+                .map(file -> new FileDTO(
+                        file.getPath(),
+                        file.getSize(),
+                        hasReadAccess(file, user),
+                        hasWriteAccess(file, user),
+                        file.isOthersCanRead(),
+                        file.isOthersCanWrite(),
+                        file.isDirectory()
+                ))
+                .collect(Collectors.toList());
+    }
+
+    public void createFile(String path, String fileName, User user) {
+        String fullPath = path + "/" + fileName;
+        if (fileMetadataRepository.existsByPath(fullPath)) {
+            throw new IllegalArgumentException("File already exists");
+        }
+
+        FileMetadata metadata = new FileMetadata(
+                fileName,
+                fullPath,
+                0L, // Initial size
+                user,
+                false, // othersCanRead
+                false, // othersCanWrite
+                false  // isDirectory
+        );
+        fileMetadataRepository.save(metadata);
+    }
+
+    public void createDirectory(String path, String dirName, User user) {
+        String fullPath = path + "/" + dirName;
+        if (fileMetadataRepository.existsByPath(fullPath)) {
+            throw new IllegalArgumentException("Directory already exists");
+        }
+
+        FileMetadata metadata = new FileMetadata(
+                dirName,
+                fullPath,
+                0L, // Directory size
+                user,
+                false, // othersCanRead
+                false, // othersCanWrite
+                true   // isDirectory
+        );
+        fileMetadataRepository.save(metadata);
+    }
+
+    public void deleteFileOrDirectory(String path, User user) {
+        FileMetadata metadata = fileMetadataRepository.findByPath(path)
+                .orElseThrow(() -> new ResourceNotFoundException("File or directory not found"));
+
+        if (!hasWriteAccess(metadata, user)) {
+            throw new PermissionDeniedException("You do not have permission to delete this file/directory");
+        }
+
+        fileMetadataRepository.delete(metadata);
+    }
+
     private boolean hasReadAccess(FileMetadata file, User user) {
-        if(file.getOwner().equals(user)) return true;
+        return file.getOwner().equals(user) ||
+                file.getPermissions().stream()
+                        .anyMatch(p -> p.getUser().equals(user) && p.isCanRead()) ||
+                file.isOthersCanRead();
+    }
 
-        // Check specific permissions
-        Optional<FilePermission> permission = file.getPermissions().stream()
-                .filter(p -> p.getUser().equals(user))
-                .findFirst();
-
-        if(permission.isPresent()) return permission.get().isCanRead();
-
-        // Check others permissions
-        return file.isOthersCanRead();
+    private boolean hasWriteAccess(FileMetadata file, User user) {
+        return file.getOwner().equals(user) ||
+                file.getPermissions().stream()
+                        .anyMatch(p -> p.getUser().equals(user) && p.isCanWrite()) ||
+                file.isOthersCanWrite();
     }
 }

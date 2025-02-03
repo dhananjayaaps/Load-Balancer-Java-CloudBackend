@@ -12,13 +12,26 @@ public class FileDTO {
     private boolean canWrite;
     private boolean othersCanRead;
     private boolean othersCanWrite;
+    private boolean isDirectory;
 
-    public FileDTO(String path, Long size, boolean b, boolean b1, boolean othersCanRead, boolean othersCanWrite) {
+    // Constructor, getters, and setters
+    public FileDTO(String path, Long size, boolean canRead, boolean canWrite,
+                   boolean othersCanRead, boolean othersCanWrite, boolean isDirectory) {
         this.path = path;
         this.size = size;
-        this.canRead = b;
-        this.canWrite = b1;
+        this.canRead = canRead;
+        this.canWrite = canWrite;
         this.othersCanRead = othersCanRead;
         this.othersCanWrite = othersCanWrite;
+        this.isDirectory = isDirectory;
+    }
+
+    // Add getter and setter for isDirectory
+    public boolean isDirectory() {
+        return isDirectory;
+    }
+
+    public void setDirectory(boolean directory) {
+        isDirectory = directory;
     }
 }

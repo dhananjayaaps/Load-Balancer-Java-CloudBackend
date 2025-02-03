@@ -138,4 +138,63 @@ public class FileController {
         }
     }
 
+    @GetMapping("/list")
+    public ResponseEntity<List<FileDTO>> listFiles(@RequestParam String path) {
+        try {
+            UserDetails userDetails = userDetailsService.getCurrentUser();
+            User user = userRepository.findByUsername(userDetails.getUsername()).get();
+
+            List<FileDTO> files = fileService.listFiles(path, user);
+            return ResponseEntity.ok(files);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PostMapping("/create-file")
+    public ResponseEntity<String> createFile(
+            @RequestParam String path,
+            @RequestParam String fileName) {
+        try {
+            UserDetails userDetails = userDetailsService.getCurrentUser();
+            User user = userRepository.findByUsername(userDetails.getUsername()).get();
+
+            fileService.createFile(path, fileName, user);
+            return ResponseEntity.ok("File created successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error creating file: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/create-directory")
+    public ResponseEntity<String> createDirectory(
+            @RequestParam String path,
+            @RequestParam String dirName) {
+        try {
+            UserDetails userDetails = userDetailsService.getCurrentUser();
+            User user = userRepository.findByUsername(userDetails.getUsername()).get();
+
+            fileService.createDirectory(path, dirName, user);
+            return ResponseEntity.ok("Directory created successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error creating directory: " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/delete")
+    public ResponseEntity<String> deleteFileOrDirectory(@RequestParam String path) {
+        try {
+            UserDetails userDetails = userDetailsService.getCurrentUser();
+            User user = userRepository.findByUsername(userDetails.getUsername()).get();
+
+            fileService.deleteFileOrDirectory(path, user);
+            return ResponseEntity.ok("Deleted successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error deleting: " + e.getMessage());
+        }
+    }
+
 }
