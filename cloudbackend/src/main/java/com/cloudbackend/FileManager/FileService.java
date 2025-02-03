@@ -1,6 +1,8 @@
 package com.cloudbackend.FileManager;
 
+import com.cloudbackend.dto.FileDTO;
 import com.cloudbackend.entity.FileMetadata;
+import com.cloudbackend.entity.FilePermission;
 import com.cloudbackend.entity.User;
 import com.cloudbackend.repository.FileMetadataRepository;
 import com.cloudbackend.service.TrafficMonitoringService;
@@ -12,6 +14,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 
@@ -50,7 +53,10 @@ public class FileService {
         this.healthCheckService = healthCheckService;
     }
 
-    public void uploadFile(String fileNameOriginal, byte[] fileData, User owner, String path, String schedulingAlgorithm, List<Integer> priorities) throws InterruptedException {
+    public void uploadFile(String fileNameOriginal, byte[] fileData, User owner, String path,
+                           String schedulingAlgorithm, List<Integer> priorities,
+                           boolean othersCanRead, boolean othersCanWrite) throws InterruptedException {
+
         // Determine priority and submit upload request
         int priority = calculatePriority(owner, priorities);
         trafficMonitoringService.incrementActiveRequests();
@@ -144,12 +150,14 @@ public class FileService {
         return merged;
     }
 
-    public byte[] downloadFile(String filePath) throws Exception {
+    public byte[] downloadFile(String filePath, User requester) throws Exception{
         try {
-            // Retrieve metadata by path
             FileMetadata metadata = fileMetadataRepository.findByPath(filePath)
-                    .orElseThrow(() -> new RuntimeException("File metadata not found for path: " + filePath));
+                    .orElseThrow(() -> new RuntimeException("File not found"));
 
+            if(!hasReadAccess(metadata, requester)) {
+                throw new SecurityException("No read permission");
+            }
             trafficController.acquireDownloadSlot();
 
             int totalChunks = metadata.getTotalChunks();
@@ -187,5 +195,41 @@ public class FileService {
         return files.stream()
                 .map(FileMetadata::getPath)
                 .collect(Collectors.toList());
+    }
+
+    public List<FileDTO> getFilesWithPermissions(User user) {
+        List<FileMetadata> files = fileMetadataRepository.findByOwner_Id(user.getId());
+        return files.stream().map(file ->
+                new FileDTO(
+                        file.getPath(),
+                        file.getSize(),
+                        true,  // owner always has access
+                        true,
+                        file.isOthersCanRead(),
+                        file.isOthersCanWrite()
+                )
+        ).collect(Collectors.toList());
+    }
+
+    public void updateOthersPermissions(Long fileId, boolean canRead, boolean canWrite) {
+        FileMetadata file = fileMetadataRepository.findById(fileId)
+                .orElseThrow(() -> new RuntimeException("File not found"));
+        file.setOthersCanRead(canRead);
+        file.setOthersCanWrite(canWrite);
+        fileMetadataRepository.save(file);
+    }
+
+    private boolean hasReadAccess(FileMetadata file, User user) {
+        if(file.getOwner().equals(user)) return true;
+
+        // Check specific permissions
+        Optional<FilePermission> permission = file.getPermissions().stream()
+                .filter(p -> p.getUser().equals(user))
+                .findFirst();
+
+        if(permission.isPresent()) return permission.get().isCanRead();
+
+        // Check others permissions
+        return file.isOthersCanRead();
     }
 }

@@ -2,6 +2,9 @@ package com.cloudbackend.controller;
 
 import com.cloudbackend.FileManager.FileService;
 import com.cloudbackend.FileManager.FileSharingService;
+import com.cloudbackend.dto.FileDTO;
+import com.cloudbackend.dto.OthersPermissionDTO;
+import com.cloudbackend.dto.PermissionUpdateDTO;
 import com.cloudbackend.entity.User;
 import com.cloudbackend.repository.UserRepository;
 import com.cloudbackend.service.CustomUserDetailsService;
@@ -32,19 +35,63 @@ public class FileController {
     }
 
     @PostMapping("/upload")
-    public ResponseEntity<String> uploadFile(@RequestParam("file") MultipartFile file, @RequestParam("path") String path) {
-        try {
+    public ResponseEntity<String> uploadFile(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("path") String path,
+            @RequestParam(defaultValue = "false") boolean othersCanRead,
+            @RequestParam(defaultValue = "false") boolean othersCanWrite) {
 
+        try {
             UserDetails userDetails = userDetailsService.getCurrentUser();
             User user = userRepository.findByUsername(userDetails.getUsername()).get();
 
-            // Process file upload
-            fileService.uploadFile(file.getOriginalFilename(), file.getBytes(), user, path ,"RR", null);
+            fileService.uploadFile(
+                    file.getOriginalFilename(),
+                    file.getBytes(),
+                    user,
+                    path,
+                    "RR",
+                    null,
+                    othersCanRead,
+                    othersCanWrite
+            );
 
             return ResponseEntity.ok("File uploaded successfully");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error uploading file: " + e.getMessage());
+        }
+    }
+
+    // New permission endpoints
+    @PutMapping("/{fileId}/permissions")
+    public ResponseEntity<String> updateUserPermissions(
+            @PathVariable Long fileId,
+            @RequestBody PermissionUpdateDTO permissionDTO) {
+
+        try {
+            fileSharingService.updateUserPermissions(fileId, permissionDTO);
+            return ResponseEntity.ok("Permissions updated successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Error updating permissions: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/{fileId}/others-permissions")
+    public ResponseEntity<String> updateOthersPermissions(
+            @PathVariable Long fileId,
+            @RequestBody OthersPermissionDTO permissionDTO) {
+
+        try {
+            fileService.updateOthersPermissions(fileId,
+                    permissionDTO.isOthersCanRead(),
+                    permissionDTO.isOthersCanWrite()
+            );
+            return ResponseEntity.ok("Others permissions updated");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Error updating permissions: " + e.getMessage());
         }
     }
 
@@ -54,7 +101,7 @@ public class FileController {
             UserDetails userDetails = userDetailsService.getCurrentUser();
             User user = userRepository.findByUsername(userDetails.getUsername()).get();
 
-            byte[] fileData = fileService.downloadFile(filePath); // Pass filePath instead of fileName
+            byte[] fileData = fileService.downloadFile(filePath, user); // Pass filePath instead of fileName
             return ResponseEntity.ok(fileData);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

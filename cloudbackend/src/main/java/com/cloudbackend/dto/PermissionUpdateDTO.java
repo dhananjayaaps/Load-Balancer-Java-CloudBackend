@@ -10,5 +10,29 @@ public class PermissionUpdateDTO {
     private boolean canRead;
     private boolean canWrite;
 
-    // getters and setters
+    public Long getUserId() {
+        return userId;
+    }
+
+    void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    public boolean isCanRead() {
+        return canRead;
+    }
+
+    void setCanRead(boolean canRead) {
+        this.canRead = canRead;
+    }
+
+    public boolean isCanWrite() {
+        return canWrite;
+    }
+
+    void setCanWrite(boolean canWrite) {
+        this.canWrite = canWrite;
+    }
+
+
 }

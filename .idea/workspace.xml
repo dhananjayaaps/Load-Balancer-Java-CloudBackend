@@ -5,10 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f5ad5bce-036f-4417-ad65-fa6a2697740d" name="Changes" comment="Authentication finished">
-      <change afterPath="$PROJECT_DIR$/frontend/src/main/java/com/cloudbackend/frontend/FileExplorerController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/frontend/src/main/resources/com/cloudbackend/frontend/FileExplorerView.fxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/main/java/com/cloudbackend/frontend/App.java" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main/java/com/cloudbackend/frontend/App.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/main/java/com/cloudbackend/frontend/LoginController.java" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main/java/com/cloudbackend/frontend/LoginController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cloudbackend/src/main/java/com/cloudbackend/FileManager/FileService.java" beforeDir="false" afterPath="$PROJECT_DIR$/cloudbackend/src/main/java/com/cloudbackend/FileManager/FileService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cloudbackend/src/main/java/com/cloudbackend/FileManager/FileSharingService.java" beforeDir="false" afterPath="$PROJECT_DIR$/cloudbackend/src/main/java/com/cloudbackend/FileManager/FileSharingService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cloudbackend/src/main/java/com/cloudbackend/controller/FileController.java" beforeDir="false" afterPath="$PROJECT_DIR$/cloudbackend/src/main/java/com/cloudbackend/controller/FileController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cloudbackend/src/main/java/com/cloudbackend/dto/FileDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/cloudbackend/src/main/java/com/cloudbackend/dto/FileDTO.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cloudbackend/src/main/java/com/cloudbackend/dto/PermissionUpdateDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/cloudbackend/src/main/java/com/cloudbackend/dto/PermissionUpdateDTO.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cloudbackend/src/main/java/com/cloudbackend/entity/FilePermission.java" beforeDir="false" afterPath="$PROJECT_DIR$/cloudbackend/src/main/java/com/cloudbackend/entity/FilePermission.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cloudbackend/src/main/java/com/cloudbackend/repository/FilePermissionRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/cloudbackend/src/main/java/com/cloudbackend/repository/FilePermissionRepository.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -123,6 +126,7 @@
       <workItem from="1737051156829" duration="46000" />
       <workItem from="1737996777591" duration="17000" />
       <workItem from="1738002588516" duration="19000" />
+      <workItem from="1738604346820" duration="11000" />
     </task>
     <task id="LOCAL-00001" summary="Project Initiated">
       <option name="closed" value="true" />
