@@ -55,7 +55,7 @@ public class FileViewController {
                     if (file.isDirectory()) {
                         fileContentArea.clear();
                     } else if (file.isCanRead()) {
-                        loadFileContentFromBackend(path);
+                        loadFileContentFromBackend(file.getPath());
                     } else {
                         fileContentArea.setText("Access Denied: You do not have read permission for this file.");
                         fileContentArea.setDisable(true);
@@ -192,13 +192,15 @@ public class FileViewController {
     }
 
     private FileDTO findFileByPathRecursive(TreeItem<String> item, String path) {
-        // Check if the current item matches the path
         if (item.getValue().equals(path)) {
-            // Return the FileDTO associated with this item
-            return (FileDTO) item.getGraphic().getUserData();
+            // Check if the graphic exists before calling getUserData()
+            if (item.getGraphic() != null) {
+                return (FileDTO) item.getGraphic().getUserData();
+            } else {
+                return null; // Prevents NullPointerException
+            }
         }
 
-        // Recursively search in the children
         for (TreeItem<String> child : item.getChildren()) {
             FileDTO found = findFileByPathRecursive(child, path);
             if (found != null) {
@@ -206,7 +208,6 @@ public class FileViewController {
             }
         }
 
-        // If not found, return null
         return null;
     }
 
