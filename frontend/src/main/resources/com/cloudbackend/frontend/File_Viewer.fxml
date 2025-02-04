@@ -19,6 +19,7 @@
             <Button fx:id="deleteButton" text="Delete" />
             <Button fx:id="createFileButton" text="Create File" />
             <Button fx:id="createDirectoryButton" text="Create Directory" />
+            <Button fx:id="initialize" text="Refresh Tree" />
         </HBox>
     </bottom>
 </BorderPane>
