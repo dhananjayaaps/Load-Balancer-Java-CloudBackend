@@ -1,5 +1,7 @@
 package com.cloudbackend.frontend;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class FileDTO {
     private String path;
     private Long size;
@@ -8,6 +10,8 @@ public class FileDTO {
     private boolean othersCanRead;
     private boolean othersCanWrite;
     private boolean isDirectory;
+
+    public FileDTO() {}
 
     // Constructor
     public FileDTO(String path, Long size, boolean canRead, boolean canWrite,

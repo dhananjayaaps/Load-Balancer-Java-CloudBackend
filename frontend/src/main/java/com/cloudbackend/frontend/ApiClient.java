@@ -10,7 +10,7 @@ public class ApiClient {
     private static final RestTemplate restTemplate = new RestTemplate();
 
 //    private static final String token = ApplicationSession.getJwtToken();
-    private static final String token = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsImlhdCI6MTczODYwODY3NywiZXhwIjoxNzM4NjI2Njc3fQ.UM4D8zhz7WofD9zgY1kbu8g7CJn3MqWABwjikhOeu07dtk1ARJBxl6odRuLPT0JYDj1IJb188CRELh7e6eu5QQ";
+    private static final String token = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsImlhdCI6MTczODY0MjM3NSwiZXhwIjoxNzM4NjYwMzc1fQ.6CEPb968DaNPgFi-u80sKWoePuuMTWslHjAeigVlA1Y5aZr5GjDzfoFNHDEoJnvsmxdiYVw48FDrYvd2uwhFzA";
 
     // Helper method to create headers with Bearer Token
     private static HttpHeaders createHeaders(String token) {

@@ -11,6 +11,7 @@ import javafx.scene.control.Alert.AlertType;
 import com.cloudbackend.frontend.ApiClient;
 import com.cloudbackend.frontend.FileDTO;
 
+import java.lang.invoke.ConstantBootstraps;
 import java.util.List;
 import java.util.Optional;
 
@@ -76,6 +77,7 @@ public class FileViewController {
                 addFileItemToTree(file);
             }
         } catch (Exception e) {
+            System.out.println("Error loading files: " + e.getMessage());
             new Alert(AlertType.ERROR, "Error loading files: " + e.getMessage()).show();
         }
     }
@@ -184,12 +186,60 @@ public class FileViewController {
         });
     }
 
-    private com.cloudbackend.frontend.FileDTO findFileByPath(String path) {
-        // Implement logic to find a file by path in the tree
-        return null; // Placeholder
+    private FileDTO findFileByPath(String path) {
+        // Traverse the tree to find the file with the given path
+        return findFileByPathRecursive(rootItem, path);
     }
 
-    private void addFileItemToTree(com.cloudbackend.frontend.FileDTO file) {
-        // Implement logic to add a file to the tree
+    private FileDTO findFileByPathRecursive(TreeItem<String> item, String path) {
+        // Check if the current item matches the path
+        if (item.getValue().equals(path)) {
+            // Return the FileDTO associated with this item
+            return (FileDTO) item.getGraphic().getUserData();
+        }
+
+        // Recursively search in the children
+        for (TreeItem<String> child : item.getChildren()) {
+            FileDTO found = findFileByPathRecursive(child, path);
+            if (found != null) {
+                return found;
+            }
+        }
+
+        // If not found, return null
+        return null;
+    }
+
+    private void addFileItemToTree(FileDTO file) {
+        // Split the path into parts
+        String[] parts = file.getPath().split("/");
+        TreeItem<String> currentItem = rootItem;
+
+        // Traverse the tree and create nodes as needed
+        for (String part : parts) {
+            if (part.isEmpty()) continue; // Skip empty parts (e.g., leading slash)
+
+            // Check if the current part already exists in the tree
+            TreeItem<String> foundItem = null;
+            for (TreeItem<String> child : currentItem.getChildren()) {
+                if (child.getValue().equals(part)) {
+                    foundItem = child;
+                    break;
+                }
+            }
+
+            // If the part doesn't exist, create a new node
+            if (foundItem == null) {
+                foundItem = new TreeItem<>(part);
+                currentItem.getChildren().add(foundItem);
+            }
+
+            // Move to the next level in the tree
+            currentItem = foundItem;
+        }
+
+        // Store the FileDTO object in the TreeItem's graphic
+        currentItem.setGraphic(new javafx.scene.control.Label(file.isDirectory() ? "[DIR]" : "[FILE]"));
+        currentItem.getGraphic().setUserData(file); // Attach the FileDTO to the TreeItem
     }
 }
