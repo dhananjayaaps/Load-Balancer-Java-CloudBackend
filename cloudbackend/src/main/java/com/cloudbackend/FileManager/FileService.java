@@ -73,6 +73,8 @@ public class FileService {
         }
 
         String fileName = owner.getUsername() + "_" + fileNameOriginal;
+        String randomValue = String.valueOf((int) (Math.random() * 1000));
+        fileName = fileName + "_" + randomValue;
 
         // Check if file already exists
         String savePath = "/" + owner.getUsername() + path;
@@ -80,16 +82,15 @@ public class FileService {
 
         Optional<FileMetadata> existingFileOpt = fileMetadataRepository.findByPath(savePath);
 
-        existingFileOpt.ifPresent(existingFile -> {
-            // Delete old chunks
-            deleteChunks(existingFile);
-        });
+        // Delete old chunks
+        existingFileOpt.ifPresent(this::deleteChunks);
 
         CountDownLatch latch = new CountDownLatch(1);
 
+        String finalFileName = fileName;
         trafficController.submitRequest(priority, () -> {
             try {
-                processUpload(fileNameOriginal, fileName, fileData, owner, path, schedulingAlgorithm, priorities, existingFileOpt);
+                processUpload(fileNameOriginal, finalFileName, fileData, owner, path, schedulingAlgorithm, priorities, existingFileOpt);
             } catch (Exception e) {
                 System.err.println("Error during upload processing: " + e.getMessage());
                 throw new RuntimeException("Failed to process file upload: " + e.getMessage(), e);
