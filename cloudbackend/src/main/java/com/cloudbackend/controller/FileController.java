@@ -2,9 +2,7 @@ package com.cloudbackend.controller;
 
 import com.cloudbackend.FileManager.FileService;
 import com.cloudbackend.FileManager.FileSharingService;
-import com.cloudbackend.dto.FileDTO;
-import com.cloudbackend.dto.OthersPermissionDTO;
-import com.cloudbackend.dto.PermissionUpdateDTO;
+import com.cloudbackend.dto.*;
 import com.cloudbackend.entity.User;
 import com.cloudbackend.repository.UserRepository;
 import com.cloudbackend.service.CustomUserDetailsService;
@@ -16,6 +14,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
@@ -197,4 +196,33 @@ public class FileController {
         }
     }
 
+    @PostMapping("/save")
+    public ResponseEntity<String> saveFile(@RequestBody UpdateRequest updateRequest) {
+        try {
+
+            UserDetails userDetails = userDetailsService.getCurrentUser();
+            User user = userRepository.findByUsername(userDetails.getUsername()).get();
+
+            // Convert the string content to bytes
+            byte[] fileData = updateRequest.getContent().getBytes(StandardCharsets.UTF_8);
+
+            // Call the same file upload method
+            fileService.updateFile(
+                    updateRequest.getFileName(),
+                    fileData,
+                    user,
+                    updateRequest.getPath(),
+                    "RR",
+                    null,
+                    false,
+                    false
+            );
+
+            return ResponseEntity.ok("File saved successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error saving file: " + e.getMessage());
+        }
+    }
 }
+

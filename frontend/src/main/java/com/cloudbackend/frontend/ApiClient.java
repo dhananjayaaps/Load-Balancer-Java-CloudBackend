@@ -1,16 +1,29 @@
 package com.cloudbackend.frontend;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import javafx.scene.control.Alert;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.http.*;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpResponse;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ApiClient {
     private static final String BASE_URL = "http://localhost:8080/files";
     private static final RestTemplate restTemplate = new RestTemplate();
 
 //    private static final String token = ApplicationSession.getJwtToken();
-    private static final String token = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsImlhdCI6MTczODY0MjM3NSwiZXhwIjoxNzM4NjYwMzc1fQ.6CEPb968DaNPgFi-u80sKWoePuuMTWslHjAeigVlA1Y5aZr5GjDzfoFNHDEoJnvsmxdiYVw48FDrYvd2uwhFzA";
+    private static final String token = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsImlhdCI6MTczODcyMTkzNCwiZXhwIjoxNzM4NzM5OTM0fQ.a2d_11K6K2l97ddIDtePZvDyvjI5Sy4OIq5vZsMAUBRCyGaLyAxfcd3H_STQeQQ99lbd0MZY8LMh77DtOD0fyQ";
 
     // Helper method to create headers with Bearer Token
     private static HttpHeaders createHeaders(String token) {
@@ -48,16 +61,35 @@ public class ApiClient {
         return response.getBody();
     }
 
-    // Save file content
-    public static void saveFile(String path, String content) {
+    public static void saveFile(String path, String filename, String content, boolean othersCanRead, boolean othersCanWrite) {
         HttpHeaders headers = createHeaders(token);
-        HttpEntity<String> request = new HttpEntity<>(content, headers);
+        headers.setContentType(MediaType.APPLICATION_JSON);  // Ensure JSON format
 
-        restTemplate.exchange(
-                BASE_URL + "/save?filePath=" + path,
-                HttpMethod.POST,
-                request,
-                String.class);
+        System.out.println("path: " + path);
+        System.out.println("filename: " + filename);
+        System.out.println("content: " + content);
+
+        try {
+            // Create JSON request payload
+            ObjectMapper objectMapper = new ObjectMapper();
+            String requestBody = objectMapper.writeValueAsString(new ApiClient.UpdateRequest(path, filename, content));
+
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(URI.create(BASE_URL + "/save"))
+                    .header("Authorization", "Bearer " + token) // Correct way to add Bearer token
+                    .header("Content-Type", "application/json")
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(requestBody))
+                    .build();
+
+            // Send HTTP request
+            HttpClient client = HttpClient.newHttpClient();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            System.out.println(response.body());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert(Alert.AlertType.ERROR, "Error", "Failed to connect to the server: " + e.getMessage());
+        }
     }
 
     // Delete file or directory
@@ -94,5 +126,32 @@ public class ApiClient {
                 HttpMethod.POST,
                 entity,
                 String.class);
+    }
+
+    @Getter
+    @Setter
+    static
+    class UpdateRequest {
+        @JsonProperty
+        private String path;
+        @JsonProperty
+        private String filename;
+        @JsonProperty
+        private String content;
+
+        public UpdateRequest(String path, String fileName, String content) {
+            this.filename = fileName;
+            this.content = content;
+            this.path = path;
+        }
+
+    }
+
+    private static void showAlert(Alert.AlertType alertType, String title, String content) {
+        Alert alert = new Alert(alertType);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(content);
+        alert.showAndWait();
     }
 }

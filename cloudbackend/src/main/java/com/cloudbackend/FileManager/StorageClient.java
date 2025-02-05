@@ -64,4 +64,15 @@ public class StorageClient {
             return null;
         }
     }
+
+    public void deleteChunk(String container, String fileName) {
+        String sanitizedContainer = sanitizeContainerName(container);
+        String filePath = storageDirectory + File.separator + sanitizedContainer + File.separator + fileName;
+
+        File file = new File(filePath);
+        if (file.exists()) {
+            file.delete();
+        }
+    }
+
 }

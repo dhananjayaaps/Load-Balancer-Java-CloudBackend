@@ -104,9 +104,10 @@ public class FileViewController {
 
         if (file != null && file.isCanWrite()) {
             try {
-                ApiClient.saveFile(path, fileContentArea.getText());
+                ApiClient.saveFile(file.getPath(), path, fileContentArea.getText(), false, false);
                 new Alert(AlertType.INFORMATION, "File saved successfully").show();
             } catch (Exception e) {
+                System.out.println(e.getMessage());
                 new Alert(AlertType.ERROR, "Error saving file: " + e.getMessage()).show();
             }
         } else {

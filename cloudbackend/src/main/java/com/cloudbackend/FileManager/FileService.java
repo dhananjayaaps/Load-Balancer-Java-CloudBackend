@@ -59,6 +59,8 @@ public class FileService {
                            String schedulingAlgorithm, List<Integer> priorities,
                            boolean othersCanRead, boolean othersCanWrite) throws InterruptedException {
 
+        System.out.println("Uploading file: " + fileNameOriginal);
+
         // Determine priority and submit upload request
         int priority = calculatePriority(owner, priorities);
         trafficMonitoringService.incrementActiveRequests();
@@ -70,17 +72,24 @@ public class FileService {
             throw new RuntimeException("No healthy storage containers available.");
         }
 
-//        make a random value to add to the file name
-        String randomValue = String.valueOf((int) (Math.random() * 1000));
+        String fileName = owner.getUsername() + "_" + fileNameOriginal;
 
-        String fileName = owner.getUsername() + "_" + randomValue + "_"+ fileNameOriginal;
+        // Check if file already exists
+        String savePath = "/" + owner.getUsername() + path;
+        savePath = savePath.replaceAll("/+", "/").replaceAll("/$", ""); // Normalize path
 
-        // Use CountDownLatch to wait for task completion
+        Optional<FileMetadata> existingFileOpt = fileMetadataRepository.findByPath(savePath);
+
+        existingFileOpt.ifPresent(existingFile -> {
+            // Delete old chunks
+            deleteChunks(existingFile);
+        });
+
         CountDownLatch latch = new CountDownLatch(1);
 
         trafficController.submitRequest(priority, () -> {
             try {
-                processUpload(fileNameOriginal, fileName, fileData, owner, path, schedulingAlgorithm, priorities);
+                processUpload(fileNameOriginal, fileName, fileData, owner, path, schedulingAlgorithm, priorities, existingFileOpt);
             } catch (Exception e) {
                 System.err.println("Error during upload processing: " + e.getMessage());
                 throw new RuntimeException("Failed to process file upload: " + e.getMessage(), e);
@@ -90,9 +99,9 @@ public class FileService {
         });
 
         latch.await();
-
         trafficMonitoringService.decrementActiveRequests();
     }
+
 
     // Method to check the health of containers
     private List<String> checkContainerHealth() {
@@ -104,22 +113,21 @@ public class FileService {
 
 
 
-    private void processUpload(String fileNameOriginal, String fileName, byte[] fileData, User owner, String path, String schedulingAlgorithm, List<Integer> priorities) throws Exception {
+    private void processUpload(String fileNameOriginal, String fileName, byte[] fileData, User owner, String path,
+                               String schedulingAlgorithm, List<Integer> priorities, Optional<FileMetadata> existingFileOpt) throws Exception {
         try {
             trafficController.acquireUploadSlot();
-
             TrafficEmulator.applyTrafficEmulatedDelay(trafficMonitoringService.determineTrafficLevel());
 
             List<byte[]> chunks = chunkingService.splitFile(fileData, 1024);
-
             List<String> containers = List.of(storageContainers.split(","));
 
             String savePath = "/" + owner.getUsername() + path + "/" + fileNameOriginal;
-            // Normalize the path to avoid duplicates or invalid formats
-            savePath = savePath.replaceAll("/+", "/"); // Replace multiple slashes with one
-            savePath = savePath.replaceAll("/$", ""); // Remove trailing slash
+            savePath = savePath.replaceAll("/+", "/").replaceAll("/$", "");
 
-            FileMetadata metadata = new FileMetadata(fileName, savePath, (long) fileData.length, owner);
+            FileMetadata metadata = existingFileOpt.orElse(new FileMetadata(fileName, savePath, (long) fileData.length, owner));
+
+            metadata.setSize((long) fileData.length);
             metadata.setTotalChunks(chunks.size());
             fileMetadataRepository.save(metadata);
 
@@ -129,16 +137,14 @@ public class FileService {
                 String targetContainer = loadBalancer.handleTraffic(containers, schedulingAlgorithm, priorities);
                 storageClient.saveChunk(targetContainer, fileName + "_chunk_" + i, encryptedChunk.getBytes());
             }
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             System.err.println("Error during file upload: " + e.getMessage());
             throw new Exception("Failed to process file upload: " + e.getMessage(), e);
-        }
-        finally {
+        } finally {
             trafficController.releaseUploadSlot();
         }
-
     }
+
 
     private int calculatePriority(User owner, List<Integer> priorities) {
         // Calculate priority based on provided logic
@@ -299,4 +305,61 @@ public class FileService {
                         .anyMatch(p -> p.getUser().equals(user) && p.isCanWrite()) ||
                 file.isOthersCanWrite();
     }
+
+    private void deleteChunks(FileMetadata fileMetadata) {
+        List<String> containers = List.of(storageContainers.split(","));
+        for (int i = 0; i < fileMetadata.getTotalChunks(); i++) {
+            String chunkName = fileMetadata.getName() + "_chunk_" + i;
+            for (String container : containers) {
+                storageClient.deleteChunk(container, chunkName);
+            }
+        }
+    }
+
+    public void updateFile(String fileNameOriginal, byte[] fileData, User owner, String path,
+                           String schedulingAlgorithm, List<Integer> priorities,
+                           boolean othersCanRead, boolean othersCanWrite) throws InterruptedException {
+
+        System.out.println("Uploading file: " + fileNameOriginal);
+
+        // Determine priority and submit upload request
+        int priority = calculatePriority(owner, priorities);
+        trafficMonitoringService.incrementActiveRequests();
+
+        // Check for healthy containers
+        List<String> healthyContainers = checkContainerHealth();
+        if (healthyContainers.isEmpty()) {
+            trafficMonitoringService.decrementActiveRequests();
+            throw new RuntimeException("No healthy storage containers available.");
+        }
+
+        FileMetadata file = fileMetadataRepository.findByPath(path)
+                .orElseThrow(() -> new ResourceNotFoundException("File not found"));
+
+        // Check if file already exists
+        String savePath = file.getPath();
+        savePath = savePath.replaceAll("/+", "/").replaceAll("/$", ""); // Normalize path
+
+        Optional<FileMetadata> existingFileOpt = fileMetadataRepository.findByPath(savePath);
+
+        // Delete old chunks
+        existingFileOpt.ifPresent(this::deleteChunks);
+
+        CountDownLatch latch = new CountDownLatch(1);
+
+        trafficController.submitRequest(priority, () -> {
+            try {
+                processUpload(fileNameOriginal, file.getName(), fileData, owner, path, schedulingAlgorithm, priorities, existingFileOpt);
+            } catch (Exception e) {
+                System.err.println("Error during upload processing: " + e.getMessage());
+                throw new RuntimeException("Failed to process file upload: " + e.getMessage(), e);
+            } finally {
+                latch.countDown(); // Signal completion
+            }
+        });
+
+        latch.await();
+        trafficMonitoringService.decrementActiveRequests();
+    }
+
 }
