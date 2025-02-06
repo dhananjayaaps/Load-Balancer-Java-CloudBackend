@@ -178,13 +178,8 @@ public class FileViewController {
 
                 if (Objects.equals(directoryOwner, user)) {
                     try {
-                        // Construct the full path for the new file
                         String fullPath = parentPath.endsWith("/") ? parentPath + fileName : parentPath;
-
-                        // Call the backend API to create the file
                         ApiClient.createFile(fullPath, fileName);
-
-                        // Refresh the TreeView to show the new file
                         loadFilesFromBackend(parentPath);
                     } catch (Exception e) {
                         new Alert(AlertType.ERROR, "Error creating file: " + e.getMessage()).show();
@@ -205,12 +200,31 @@ public class FileViewController {
         result.ifPresent(dirName -> {
             TreeItem<String> selectedItem = fileTreeView.getSelectionModel().getSelectedItem();
             if (selectedItem != null) {
-                String parentPath = selectedItem.getValue();
+                // Get the full path of the selected item
+                String parentPath = getFullPathFromTreeItem(selectedItem);
                 FileDTO parentFile = findFileByPath(parentPath);
 
-                if (parentFile != null && parentFile.isCanWrite()) {
+                if (parentPath.length() > 4) {
+                    parentPath = parentPath.substring(4);
+                } else {
+                    parentPath = "/";
+                }
+
+                String directoryOwner = extractUsernameFromPath(parentPath);
+
+                System.out.println(directoryOwner);
+                if (directoryOwner.startsWith("/")) {
+                    directoryOwner = directoryOwner.substring(1); // Remove the first character
+                }
+
+                System.out.println("Parent path : " + parentPath);
+
+                System.out.println(directoryOwner);
+
+                if (Objects.equals(directoryOwner, user)) {
                     try {
-                        ApiClient.createDirectory(parentPath, dirName);
+                        String fullPath = parentPath.endsWith("/") ? parentPath + dirName : parentPath;
+                        ApiClient.createDirectory(fullPath, dirName);
                         loadFilesFromBackend(parentPath); // Refresh the list
                     } catch (Exception e) {
                         new Alert(AlertType.ERROR, "Error creating directory: " + e.getMessage()).show();
@@ -221,6 +235,7 @@ public class FileViewController {
             }
         });
     }
+
 
     private FileDTO findFileByPath(String path) {
         // Traverse the tree to find the file with the given path
@@ -276,7 +291,7 @@ public class FileViewController {
         }
 
         // Store the FileDTO object in the TreeItem's graphic
-        currentItem.setGraphic(new javafx.scene.control.Label(file.isDirectory() ? "[DIR]" : "[FILE]"));
+        currentItem.setGraphic(new javafx.scene.control.Label(file.isDirectory() ? "" : "[FILE]"));
         currentItem.getGraphic().setUserData(file); // Attach the FileDTO to the TreeItem
     }
 
