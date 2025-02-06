@@ -91,6 +91,9 @@ public class FileViewController {
             if (fileData != null) {
                 fileContentArea.setText(new String(fileData));
             }
+            else {
+                fileContentArea.setText("");
+            }
         } catch (Exception e) {
             fileContentArea.setText("Error reading file: " + e.getMessage());
         }
@@ -121,10 +124,23 @@ public class FileViewController {
     private void deleteSelectedItemFromBackend() {
         TreeItem<String> selectedItem = fileTreeView.getSelectionModel().getSelectedItem();
         if (selectedItem != null) {
-            String path = selectedItem.getValue();
+            // Get the full path of the selected item
+            String path = getFullPathFromTreeItem(selectedItem);
             FileDTO file = findFileByPath(path);
 
-            if (file != null && file.isCanWrite()) {
+            if (path.length() > 4) {
+                path = path.substring(4);
+            } else {
+                path = "/";
+            }
+
+            String itemOwner = extractUsernameFromPath(path);
+
+            if (itemOwner.startsWith("/")) {
+                itemOwner = itemOwner.substring(1); // Remove the first character
+            }
+
+            if (Objects.equals(itemOwner, user)) {
                 try {
                     ApiClient.deleteFileOrDirectory(path);
                     selectedItem.getParent().getChildren().remove(selectedItem);

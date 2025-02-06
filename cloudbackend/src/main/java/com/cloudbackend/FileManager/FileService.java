@@ -293,7 +293,26 @@ public class FileService {
             throw new PermissionDeniedException("You do not have permission to delete this file/directory");
         }
 
+        // If it's a directory, recursively delete its contents
+        if (metadata.isDirectory()) {
+            deleteDirectoryContents(path, user);
+        }
+
+        // Delete the file chunks from storage containers
+        deleteChunks(metadata);
+
+        // Finally, delete the metadata entry from the database
         fileMetadataRepository.delete(metadata);
+    }
+
+    private void deleteDirectoryContents(String directoryPath, User user) {
+        // Find all files and subdirectories within the directory
+        List<FileMetadata> contents = fileMetadataRepository.findByPathStartingWith(directoryPath + "/");
+
+        for (FileMetadata content : contents) {
+            // Recursively delete each file or subdirectory
+            deleteFileOrDirectory(content.getPath(), user);
+        }
     }
 
     private boolean hasReadAccess(FileMetadata file, User user) {
