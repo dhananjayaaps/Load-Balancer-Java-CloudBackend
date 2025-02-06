@@ -13,6 +13,7 @@ import com.cloudbackend.frontend.FileDTO;
 
 import java.lang.invoke.ConstantBootstraps;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 public class FileViewController {
@@ -36,6 +37,8 @@ public class FileViewController {
     private Button createDirectoryButton;
 
     private TreeItem<String> rootItem;
+
+    final String user = "admin";
 
     @FXML
     public void initialize() {
@@ -135,6 +138,14 @@ public class FileViewController {
         }
     }
 
+    public String extractUsernameFromPath(String path) {
+        String[] parts = path.split("/");
+        if (parts.length >= 1) {
+            return parts[1];
+        }
+        return null; // No username found
+    }
+
     private void createFileOnBackend() {
         TextInputDialog dialog = new TextInputDialog();
         dialog.setTitle("Create File");
@@ -144,13 +155,37 @@ public class FileViewController {
         result.ifPresent(fileName -> {
             TreeItem<String> selectedItem = fileTreeView.getSelectionModel().getSelectedItem();
             if (selectedItem != null) {
-                String parentPath = selectedItem.getValue();
+                // Get the full path of the selected item
+                String parentPath = getFullPathFromTreeItem(selectedItem);
                 FileDTO parentFile = findFileByPath(parentPath);
 
-                if (parentFile != null && parentFile.isCanWrite()) {
+                if (parentPath.length() > 4) {
+                    parentPath = parentPath.substring(4);
+                } else {
+                    parentPath = "/";
+                }
+
+                String directoryOwner = extractUsernameFromPath(parentPath);
+
+                System.out.println(directoryOwner);
+                if (directoryOwner.startsWith("/")) {
+                    directoryOwner = directoryOwner.substring(1); // Remove the first character
+                }
+
+                System.out.println("Parent path : " + parentPath);
+
+                System.out.println(directoryOwner);
+
+                if (Objects.equals(directoryOwner, user)) {
                     try {
-                        ApiClient.createFile(parentPath, fileName);
-                        loadFilesFromBackend(parentPath); // Refresh the list
+                        // Construct the full path for the new file
+                        String fullPath = parentPath.endsWith("/") ? parentPath + fileName : parentPath;
+
+                        // Call the backend API to create the file
+                        ApiClient.createFile(fullPath, fileName);
+
+                        // Refresh the TreeView to show the new file
+                        loadFilesFromBackend(parentPath);
                     } catch (Exception e) {
                         new Alert(AlertType.ERROR, "Error creating file: " + e.getMessage()).show();
                     }
@@ -243,5 +278,24 @@ public class FileViewController {
         // Store the FileDTO object in the TreeItem's graphic
         currentItem.setGraphic(new javafx.scene.control.Label(file.isDirectory() ? "[DIR]" : "[FILE]"));
         currentItem.getGraphic().setUserData(file); // Attach the FileDTO to the TreeItem
+    }
+
+    private String getFullPathFromTreeItem(TreeItem<String> item) {
+        StringBuilder path = new StringBuilder();
+        TreeItem<String> currentItem = item;
+
+        // Traverse from the selected item up to the root
+        while (currentItem != null && !currentItem.equals(rootItem)) {
+            path.insert(0, currentItem.getValue()); // Prepend the current item's value
+            path.insert(0, "/"); // Prepend a slash
+            currentItem = currentItem.getParent(); // Move to the parent item
+        }
+
+        // If the root item is not "/", prepend its value
+        if (rootItem != null && !rootItem.getValue().equals("/")) {
+            path.insert(0, rootItem.getValue());
+        }
+
+        return path.toString();
     }
 }

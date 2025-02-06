@@ -252,6 +252,9 @@ public class FileService {
             throw new IllegalArgumentException("File already exists");
         }
 
+        String randomValue = String.valueOf((int) (Math.random() * 1000));
+        fileName = fileName + "_" + randomValue;
+
         FileMetadata metadata = new FileMetadata(
                 fileName,
                 fullPath,
@@ -337,13 +340,11 @@ public class FileService {
         FileMetadata file = fileMetadataRepository.findByPath(path)
                 .orElseThrow(() -> new ResourceNotFoundException("File not found"));
 
-        // Check if file already exists
         String savePath = file.getPath();
         savePath = savePath.replaceAll("/+", "/").replaceAll("/$", ""); // Normalize path
 
         Optional<FileMetadata> existingFileOpt = fileMetadataRepository.findByPath(savePath);
 
-        // Delete old chunks
         existingFileOpt.ifPresent(this::deleteChunks);
 
         CountDownLatch latch = new CountDownLatch(1);
