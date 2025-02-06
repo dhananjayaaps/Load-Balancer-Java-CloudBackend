@@ -1,9 +1,10 @@
 package com.cloudbackend.controller;
 
 import com.cloudbackend.FileManager.FileService;
-import com.cloudbackend.FileManager.FileSharingService;
 import com.cloudbackend.dto.*;
 import com.cloudbackend.entity.User;
+import com.cloudbackend.exception.PermissionDeniedException;
+import com.cloudbackend.exception.ResourceNotFoundException;
 import com.cloudbackend.repository.UserRepository;
 import com.cloudbackend.service.CustomUserDetailsService;
 import org.springframework.http.HttpStatus;
@@ -22,13 +23,11 @@ import java.util.List;
 public class FileController {
 
     private final FileService fileService;
-    private final FileSharingService fileSharingService;
     private final CustomUserDetailsService userDetailsService;
     private final UserRepository userRepository;
 
-    public FileController(FileService fileService, FileSharingService fileSharingService, CustomUserDetailsService userDetailsService, UserRepository userRepository) {
+    public FileController(FileService fileService,  CustomUserDetailsService userDetailsService, UserRepository userRepository) {
         this.fileService = fileService;
-        this.fileSharingService = fileSharingService;
         this.userDetailsService = userDetailsService;
         this.userRepository = userRepository;
     }
@@ -63,17 +62,21 @@ public class FileController {
     }
 
     // New permission endpoints
-    @PutMapping("/{fileId}/permissions")
-    public ResponseEntity<String> updateUserPermissions(
-            @PathVariable Long fileId,
-            @RequestBody PermissionUpdateDTO permissionDTO) {
-
+    @PostMapping("/update-permissions")
+    public ResponseEntity<String> updatePermissions(
+            @RequestBody PermssionRequest permssionRequest) {
         try {
-            fileSharingService.updateUserPermissions(fileId, permissionDTO);
+            UserDetails userDetails = userDetailsService.getCurrentUser();
+            User user = userRepository.findByUsername(userDetails.getUsername()).get();
+
+            fileService.updateOthersPermissions(permssionRequest.getPath(), permssionRequest.isCanRead(), permssionRequest.isCanWrite(), user);
             return ResponseEntity.ok("Permissions updated successfully");
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (PermissionDeniedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Error updating permissions: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to update permissions");
         }
     }
 
@@ -108,19 +111,6 @@ public class FileController {
         }
     }
 
-    @PostMapping("/share")
-    public ResponseEntity<String> shareFile(@RequestParam Long fileId,
-                                            @RequestParam Long recipientId,
-                                            @RequestParam String permissionType) {
-        try {
-            // Perform the sharing logic
-            String result = fileSharingService.shareFile(fileId, recipientId, permissionType);
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error sharing file: " + e.getMessage());
-        }
-    }
 
     @GetMapping("/myfiles")
     public ResponseEntity<String> getMyFiles() {

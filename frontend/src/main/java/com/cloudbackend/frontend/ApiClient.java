@@ -1,6 +1,7 @@
 package com.cloudbackend.frontend;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.scene.control.Alert;
 import lombok.Getter;
@@ -129,6 +130,31 @@ public class ApiClient {
                 String.class);
     }
 
+    public static void updatePermissions(String path, boolean canRead, boolean canWrite) throws JsonProcessingException {
+
+        System.out.println(path + " " + canRead + " " + canWrite);
+        ObjectMapper objectMapper = new ObjectMapper();
+        String requestBody = objectMapper.writeValueAsString(new ApiClient.PermissionRequest(path, canRead, canWrite));
+
+        try {
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(URI.create(BASE_URL + "/update-permissions"))
+                    .header("Authorization", "Bearer " + token) // Correct way to add Bearer token
+                    .header("Content-Type", "application/json")
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(requestBody))
+                    .build();
+
+            // Send HTTP request
+            HttpClient client = HttpClient.newHttpClient();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            System.out.println(response.body());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert(Alert.AlertType.ERROR, "Error", "Failed to connect to the server: " + e.getMessage());
+        }
+    }
+
     @Getter
     @Setter
     static
@@ -154,5 +180,22 @@ public class ApiClient {
         alert.setHeaderText(null);
         alert.setContentText(content);
         alert.showAndWait();
+    }
+
+    @Getter
+    @Setter
+    private static class PermissionRequest {
+        @JsonProperty
+        private String path;
+        @JsonProperty
+        private boolean canRead;
+        @JsonProperty
+        private  boolean canWrite;
+
+        public PermissionRequest(String path, boolean canRead, boolean canWrite) {
+            this.path = path;
+            this.canRead = canRead;
+            this.canWrite = canWrite;
+        }
     }
 }

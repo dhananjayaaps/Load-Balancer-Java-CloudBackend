@@ -1,15 +1,13 @@
 package com.cloudbackend.frontend;
 
 import javafx.fxml.FXML;
-import javafx.scene.control.TreeItem;
-import javafx.scene.control.TreeView;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.Button;
-import javafx.scene.control.TextInputDialog;
-import javafx.scene.control.Alert;
+import javafx.scene.Node;
+import javafx.scene.control.*;
 import javafx.scene.control.Alert.AlertType;
 import com.cloudbackend.frontend.ApiClient;
 import com.cloudbackend.frontend.FileDTO;
+import javafx.scene.layout.GridPane;
+import javafx.util.Pair;
 
 import java.lang.invoke.ConstantBootstraps;
 import java.util.List;
@@ -17,6 +15,9 @@ import java.util.Objects;
 import java.util.Optional;
 
 public class FileViewController {
+
+    @FXML
+    public Button initializeButton;
 
     @FXML
     private TreeView<String> fileTreeView;
@@ -35,6 +36,9 @@ public class FileViewController {
 
     @FXML
     private Button createDirectoryButton;
+
+    @FXML
+    private Button changePermissionsButton;
 
     private TreeItem<String> rootItem;
 
@@ -71,6 +75,8 @@ public class FileViewController {
         deleteButton.setOnAction(event -> deleteSelectedItemFromBackend());
         createFileButton.setOnAction(event -> createFileOnBackend());
         createDirectoryButton.setOnAction(event -> createDirectoryOnBackend());
+        initializeButton.setOnAction(event -> initialize());
+        changePermissionsButton.setOnAction(actionEvent -> showPermissionsPopup());
     }
 
     private void loadFilesFromBackend(String path) {
@@ -183,14 +189,9 @@ public class FileViewController {
 
                 String directoryOwner = extractUsernameFromPath(parentPath);
 
-                System.out.println(directoryOwner);
                 if (directoryOwner.startsWith("/")) {
                     directoryOwner = directoryOwner.substring(1); // Remove the first character
                 }
-
-                System.out.println("Parent path : " + parentPath);
-
-                System.out.println(directoryOwner);
 
                 if (Objects.equals(directoryOwner, user)) {
                     try {
@@ -228,14 +229,9 @@ public class FileViewController {
 
                 String directoryOwner = extractUsernameFromPath(parentPath);
 
-                System.out.println(directoryOwner);
                 if (directoryOwner.startsWith("/")) {
                     directoryOwner = directoryOwner.substring(1); // Remove the first character
                 }
-
-                System.out.println("Parent path : " + parentPath);
-
-                System.out.println(directoryOwner);
 
                 if (Objects.equals(directoryOwner, user)) {
                     try {
@@ -328,5 +324,87 @@ public class FileViewController {
         }
 
         return path.toString();
+    }
+
+    private void showPermissionsPopup() {
+
+        TreeItem<String> selectedItem = fileTreeView.getSelectionModel().getSelectedItem();
+
+        if (selectedItem == null) {
+            return;
+        }
+
+        // Get the path of the selected file/directory
+        String path = getFullPathFromTreeItem(selectedItem);
+
+        // Create a dialog for updating permissions
+        Dialog<Pair<Boolean, Boolean>> dialog = new Dialog<>();
+        dialog.setTitle("Update Permissions");
+        dialog.setHeaderText("Update permissions for: " + selectedItem.getValue());
+
+        // Set the button types (OK and Cancel)
+        ButtonType updateButtonType = new ButtonType("Update", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(updateButtonType, ButtonType.CANCEL);
+
+        // Create the UI components
+        CheckBox canReadCheckBox = new CheckBox("Others can read");
+        CheckBox canWriteCheckBox = new CheckBox("Others can write");
+
+        // Add components to the dialog
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.add(new Label("Read Permission:"), 0, 0);
+        grid.add(canReadCheckBox, 1, 0);
+        grid.add(new Label("Write Permission:"), 0, 1);
+        grid.add(canWriteCheckBox, 1, 1);
+        dialog.getDialogPane().setContent(grid);
+
+        // Enable/disable the update button based on input
+        Node updateButton = dialog.getDialogPane().lookupButton(updateButtonType);
+        updateButton.setDisable(true);
+
+        // Add listeners to enable the update button when permissions are selected
+        canReadCheckBox.selectedProperty().addListener((observable, oldValue, newValue) -> {
+            updateButton.setDisable(false);
+        });
+        canWriteCheckBox.selectedProperty().addListener((observable, oldValue, newValue) -> {
+            updateButton.setDisable(false);
+        });
+
+        // Set the result converter to return the selected permissions
+        dialog.setResultConverter(buttonType -> {
+            if (buttonType == updateButtonType) {
+                return new Pair<>(canReadCheckBox.isSelected(), canWriteCheckBox.isSelected());
+            }
+            return null;
+        });
+
+        // Show the dialog and handle the result
+        Optional<Pair<Boolean, Boolean>> result = dialog.showAndWait();
+
+        result.ifPresent(permissions -> {
+            boolean canRead = permissions.getKey();
+            boolean canWrite = permissions.getValue();
+
+            try {
+                String filepath = getFullPathFromTreeItem(selectedItem);
+                filepath = filepath.substring(4);
+                String directoryOwner = extractUsernameFromPath(filepath);
+
+                if (directoryOwner.startsWith("/")) {
+                    directoryOwner = directoryOwner.substring(1); // Remove the first character
+                }
+
+                if (directoryOwner.equals(user)){
+                    ApiClient.updatePermissions(filepath, canRead, canWrite);
+                }else{
+                    new Alert(AlertType.ERROR, "Unauthorized").show();
+                }
+
+            } catch (Exception e) {
+                System.out.println(e);
+            }
+        });
     }
 }

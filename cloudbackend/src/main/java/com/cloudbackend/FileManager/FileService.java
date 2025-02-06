@@ -2,17 +2,14 @@ package com.cloudbackend.FileManager;
 
 import com.cloudbackend.dto.FileDTO;
 import com.cloudbackend.entity.FileMetadata;
-import com.cloudbackend.entity.FilePermission;
 import com.cloudbackend.entity.User;
 import com.cloudbackend.exception.PermissionDeniedException;
 import com.cloudbackend.exception.ResourceNotFoundException;
 import com.cloudbackend.repository.FileMetadataRepository;
 import com.cloudbackend.service.TrafficMonitoringService;
 import com.cloudbackend.util.AESUtils;
-import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -381,6 +378,41 @@ public class FileService {
 
         latch.await();
         trafficMonitoringService.decrementActiveRequests();
+    }
+
+    public void updateOthersPermissions(String path, boolean canRead, boolean canWrite, User requester) {
+        System.out.println(path + " " + canRead + " " + canWrite);
+        FileMetadata file = fileMetadataRepository.findByPath(path)
+                .orElseThrow(() -> new ResourceNotFoundException("File or directory not found"));
+
+        // Check if the requester is the owner of the file/directory
+        if (!file.getOwner().equals(requester)) {
+            throw new PermissionDeniedException("Only the owner can update permissions for this file/directory.");
+        }
+
+        // Update the permissions
+        file.setOthersCanRead(canRead);
+        file.setOthersCanWrite(canWrite);
+
+        // If it's a directory, update permissions for all its contents recursively
+        if (file.isDirectory()) {
+            updatePermissionsForDirectoryContents(file.getPath(), canRead, canWrite);
+        }
+
+        // Save the updated metadata
+        fileMetadataRepository.save(file);
+    }
+
+    private void updatePermissionsForDirectoryContents(String directoryPath, boolean canRead, boolean canWrite) {
+        // Find all files and subdirectories within the directory
+        List<FileMetadata> contents = fileMetadataRepository.findByPathStartingWith(directoryPath + "/");
+
+        // Update permissions for each file or subdirectory
+        for (FileMetadata content : contents) {
+            content.setOthersCanRead(canRead);
+            content.setOthersCanWrite(canWrite);
+            fileMetadataRepository.save(content);
+        }
     }
 
 }
