@@ -2,7 +2,9 @@ package com.cloudbackend.service;
 
 import com.cloudbackend.entity.User;
 import com.cloudbackend.repository.UserRepository;
+import com.fasterxml.jackson.core.JsonPointer;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -10,6 +12,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.CompletableFuture;
@@ -37,6 +41,11 @@ public class CustomUserDetailsService implements UserDetailsService {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String doctorId = auth.getName();
         return loadUserByUsername(doctorId);
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
 }
