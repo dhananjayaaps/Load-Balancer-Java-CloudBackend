@@ -2,9 +2,9 @@ package com.cloudbackend.service;
 
 import com.cloudbackend.FileManager.FileService;
 import com.cloudbackend.dto.FileDTO;
+import com.cloudbackend.entity.FileMetadata;
 import com.cloudbackend.entity.User;
-import com.cloudbackend.exception.PermissionDeniedException;
-import com.cloudbackend.exception.ResourceNotFoundException;
+import com.cloudbackend.repository.FileMetadataRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -14,30 +14,24 @@ import java.util.List;
 public class TerminalService {
 
     private final FileService fileService;
+    private final FileMetadataRepository fileMetadataRepository;
 
     @Autowired
-    public TerminalService(FileService fileService) {
+    public TerminalService(FileService fileService, FileMetadataRepository fileMetadataRepository) {
         this.fileService = fileService;
+        this.fileMetadataRepository = fileMetadataRepository;
     }
 
     // mv (Move or rename a file/directory)
     public String moveFileOrDirectory(String sourcePath, String destinationPath, User user) {
         try {
-            // Check if source exists
-            fileService.downloadFile(sourcePath, user); // Throws exception if file doesn't exist
+            FileMetadata metadata = fileMetadataRepository.findByPath(sourcePath)
+                    .orElseThrow(() -> new RuntimeException("File not found"));
 
-            // Check if destination already exists
-            if (fileService.listFiles(destinationPath, user).stream()
-                    .anyMatch(file -> file.getPath().equals(destinationPath))) {
-                throw new IllegalArgumentException("Destination already exists");
-            }
+            metadata.setPath(destinationPath);
+            metadata.setOwner(user);
 
-            // Create a copy of the source at the destination
-            fileService.createFile(destinationPath, sourcePath.substring(sourcePath.lastIndexOf("/") + 1), user);
-
-            // Delete the source
-            fileService.deleteFileOrDirectory(sourcePath, user);
-
+            fileMetadataRepository.save(metadata);
             return "Moved " + sourcePath + " to " + destinationPath;
         } catch (Exception e) {
             throw new RuntimeException("Failed to move file/directory: " + e.getMessage(), e);
@@ -48,19 +42,34 @@ public class TerminalService {
     public String copyFileOrDirectory(String sourcePath, String destinationPath, User user) {
         try {
             // Check if source exists
-            byte[] fileData = fileService.downloadFile(sourcePath, user);
-
-            // Create a copy of the source at the destination
-            fileService.uploadFile(
-                    sourcePath.substring(sourcePath.lastIndexOf("/") + 1),
-                    fileData,
-                    user,
-                    destinationPath,
-                    "RR",
-                    null,
-                    false,
-                    false
-            );
+            String savepath = destinationPath.substring(0, destinationPath.lastIndexOf("/"));
+            try{
+                byte[] fileData = fileService.downloadFile(sourcePath, user, true);
+                // Create a copy of the source at the destination
+                fileService.uploadFile(
+                        destinationPath.substring(sourcePath.lastIndexOf("/") + 1),
+                        fileData,
+                        user,
+                        savepath,
+                        "RR",
+                        null,
+                        false,
+                        false
+                );
+            }
+            catch (Exception e){
+                // Create a copy of the source at the destination
+                fileService.uploadFile(
+                        destinationPath.substring(sourcePath.lastIndexOf("/") + 1),
+                        "".getBytes(),
+                        user,
+                        savepath,
+                        "RR",
+                        null,
+                        false,
+                        false
+                );
+            }
 
             return "Copied " + sourcePath + " to " + destinationPath;
         } catch (Exception e) {
@@ -111,7 +120,7 @@ public class TerminalService {
     }
 
     private void listDirectoryTreeRecursive(String path, User user, StringBuilder tree, int depth) {
-        List<FileDTO> files = fileService.listFiles(path, user);
+        List<FileDTO> files = fileService.buildTree(path, user);
         for (FileDTO file : files) {
             tree.append("  ".repeat(depth)).append(file.getPath()).append("\n");
             if (file.isDirectory()) {

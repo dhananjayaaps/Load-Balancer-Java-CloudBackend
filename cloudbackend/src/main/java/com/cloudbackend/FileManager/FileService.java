@@ -74,7 +74,7 @@ public class FileService {
         fileName = fileName + "_" + randomValue;
 
         // Check if file already exists
-        String savePath = "/" + owner.getUsername() + path;
+        String savePath = path;
         savePath = savePath.replaceAll("/+", "/").replaceAll("/$", ""); // Normalize path
 
         Optional<FileMetadata> existingFileOpt = fileMetadataRepository.findByPath(savePath);
@@ -156,12 +156,15 @@ public class FileService {
         return merged;
     }
 
-    public byte[] downloadFile(String filePath, User requester) throws Exception{
+    public byte[] downloadFile(String filePath, User requester, boolean autoPermission) throws Exception{
         try {
             FileMetadata metadata = fileMetadataRepository.findByPath(filePath)
                     .orElseThrow(() -> new RuntimeException("File not found"));
 
-            if(!hasReadAccess(metadata, requester)) {
+            if(autoPermission){
+                System.out.println("Copy is processing");
+            }
+            else if (!hasReadAccess(metadata, requester)) {
                 throw new SecurityException("No read permission");
             }
             trafficController.acquireDownloadSlot();
@@ -190,10 +193,6 @@ public class FileService {
         }
     }
 
-    public String getFilesByOwner(Long id) {
-        List<FileMetadata> files = fileMetadataRepository.findByOwner_Id(id);
-        return files.toString();
-    }
 
     public List<String> getFilePathsByOwner(Long ownerId) {
         List<FileMetadata> files = fileMetadataRepository.findByOwner_Id(ownerId);
@@ -201,21 +200,6 @@ public class FileService {
         return files.stream()
                 .map(FileMetadata::getPath)
                 .collect(Collectors.toList());
-    }
-
-    public List<FileDTO> getFilesWithPermissions(User user) {
-        List<FileMetadata> files = fileMetadataRepository.findByOwner_Id(user.getId());
-        return files.stream().map(file ->
-                new FileDTO(
-                        file.getPath(),
-                        file.getSize(),
-                        true,  // owner always has access
-                        true,
-                        file.isOthersCanRead(),
-                        file.isOthersCanWrite(),
-                        file.isDirectory()
-                )
-        ).collect(Collectors.toList());
     }
 
     public void updateOthersPermissions(Long fileId, boolean canRead, boolean canWrite) {
@@ -414,5 +398,21 @@ public class FileService {
             fileMetadataRepository.save(content);
         }
     }
+
+    public List<FileDTO> buildTree(String path, User user) {
+        List<FileMetadata> files = fileMetadataRepository.findByPathStartingWith(path);
+        return files.stream()
+                .map(file -> new FileDTO(
+                        file.getPath(),
+                        file.getSize(),
+                        false,
+                        false,
+                        file.isOthersCanRead(),
+                        file.isOthersCanWrite(),
+                        file.isDirectory()
+                ))
+                .collect(Collectors.toList());
+    }
+
 
 }

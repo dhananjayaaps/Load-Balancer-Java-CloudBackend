@@ -103,7 +103,7 @@ public class FileController {
             UserDetails userDetails = userDetailsService.getCurrentUser();
             User user = userRepository.findByUsername(userDetails.getUsername()).get();
 
-            byte[] fileData = fileService.downloadFile(filePath, user); // Pass filePath instead of fileName
+            byte[] fileData = fileService.downloadFile(filePath, user, false); // Pass filePath instead of fileName
             return ResponseEntity.ok(fileData);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
