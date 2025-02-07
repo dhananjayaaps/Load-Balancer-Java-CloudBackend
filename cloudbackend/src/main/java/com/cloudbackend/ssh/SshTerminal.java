@@ -104,10 +104,6 @@ public class SshTerminal implements Command, Runnable {
         }
     }
 
-    @Override
-    public void start(ChannelSession channel, Environment env) throws IOException {
-
-    }
 
     @Override
     public void destroy(ChannelSession channel) throws Exception {

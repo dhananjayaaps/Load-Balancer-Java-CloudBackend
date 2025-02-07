@@ -7,15 +7,19 @@ import com.cloudbackend.service.TerminalService;
 import com.cloudbackend.ssh.SshTerminal;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
-import org.apache.sshd.server.auth.password.PasswordAuthenticator;
-import org.apache.sshd.server.session.ServerSession;
-import org.apache.sshd.server.shell.InteractiveProcessShellFactory;
+import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.apache.sshd.server.SshServer;
 
 import java.io.IOException;
+import java.nio.file.Paths;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Component
 public class sshServerConfig {
@@ -34,43 +38,49 @@ public class sshServerConfig {
     @Autowired
     private UserRepository userRepository;
 
+    private final AuthenticationManager authenticationManager;
+
+    public sshServerConfig(AuthenticationManager authenticationManager) {
+        this.authenticationManager = authenticationManager;
+    }
+
     @PostConstruct
     public void startSshServer() throws IOException {
         sshServer = SshServer.setUpDefaultServer();
         sshServer.setPort(sshPort);
 
-        // Set up password authentication
-        sshServer.setPasswordAuthenticator(new PasswordAuthenticator() {
-            @Override
-            public boolean authenticate(String username, String password, ServerSession session) {
-                try {
-                    User user = userRepository.findByUsername(username)
-                            .orElseThrow(() -> new RuntimeException("User not found"));
-                    return userDetailsService.getPasswordEncoder().matches(password, user.getPassword());
-                } catch (Exception e) {
-                    return false;
+        sshServer.setKeyPairProvider(new SimpleGeneratorHostKeyProvider(Paths.get("hostkey.ser")));
+
+        sshServer.setPasswordAuthenticator((username, password, session) -> {
+            try {
+                Authentication authentication = authenticationManager.authenticate(
+                        new UsernamePasswordAuthenticationToken(username, password)
+                );
+                if (authentication.isAuthenticated()){
+                    UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+                    session.setUsername(userDetails.getUsername());
                 }
+                return authentication.isAuthenticated();
+            } catch (Exception e) {
+                return false;
             }
         });
 
-        // Set up a shell for executing commands
-        sshServer.setShellFactory(new InteractiveProcessShellFactory() {
-            public SshTerminal createShell(ServerSession session) {
-                User user = userRepository.findByUsername(session.getUsername())
-                        .orElseThrow(() -> new RuntimeException("User not found"));
-                return new SshTerminal(terminalService, user);
-            }
+        sshServer.setShellFactory(session -> {
+            User user = userRepository.findByUsername(session.getSession().getUsername())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            return new SshTerminal(terminalService, user);
         });
 
         sshServer.start();
-        System.out.println("SSH server started on port " + sshPort);
+        System.out.println("✅ SSH server started on port " + sshPort);
     }
 
     @PreDestroy
     public void stopSshServer() throws IOException {
         if (sshServer != null) {
             sshServer.stop();
-            System.out.println("SSH server stopped");
+            System.out.println("❌ SSH server stopped");
         }
     }
 }
