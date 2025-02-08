@@ -63,15 +63,14 @@ public class LoginController {
             // Handle response
             if (response.statusCode() == 200) {
                 // Extract JWT token from the response
-                String jwtToken = response.body(); // Example: {"token":"<JWT_TOKEN>"}
-//                String jwtToken = objectMapper.readTree(responseBody).get("token").asText();
+                String jwtToken = response.body();
 
-                // Save the token for the whole application
                 ApplicationSession.setJwtToken(jwtToken);
+                ApplicationSession.setUsername(username);
 
                 // Show success alert
                 showAlert(Alert.AlertType.INFORMATION, "Login Success", "Welcome, " + username + "!");
-                App.setRoot("FileExplorerView");
+                App.setRoot("File_Viewer");
             } else {
                 // Handle error response
                 showAlert(Alert.AlertType.ERROR, "Login Failed", "Invalid username or password.");

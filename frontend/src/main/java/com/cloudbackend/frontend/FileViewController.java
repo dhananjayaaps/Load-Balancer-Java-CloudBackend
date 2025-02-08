@@ -11,6 +11,7 @@ import javafx.stage.FileChooser;
 import javafx.util.Pair;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.invoke.ConstantBootstraps;
 import java.nio.file.Files;
 import java.util.List;
@@ -45,6 +46,9 @@ public class FileViewController {
 
     @FXML
     private Button changePermissionsButton;
+
+    @FXML
+    private Button profileButton;
 
     private TreeItem<String> rootItem;
 
@@ -84,7 +88,17 @@ public class FileViewController {
         initializeButton.setOnAction(event -> initialize());
         changePermissionsButton.setOnAction(actionEvent -> showPermissionsPopup());
         uploadFileButton.setOnAction(event -> uploadFileToBackend());
+        profileButton.setOnAction(actionEvent -> {
+            try {
+                gotoProfile();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
 
+    private void gotoProfile() throws IOException {
+        App.setRoot("ProfilePage");
     }
 
     private void uploadFileToBackend() {

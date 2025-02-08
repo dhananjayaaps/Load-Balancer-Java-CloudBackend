@@ -27,10 +27,6 @@ public class ApiClient {
 
     private static final OkHttpClient client = new OkHttpClient();
 
-//    private static final String token = ApplicationSession.getJwtToken();
-    private static final String token = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsImlhdCI6MTczODk4NTczOCwiZXhwIjoxNzM5MDAzNzM4fQ." +
-        "eEO8yeF9_EsY2zhGOAm-yC52o2VfXxFHqDtkwMw7SkEwqvIA_sHOYAC_VjGWXT6qsc_sqXiYuupkyNy8Ccx01w";
-
     public ApiClient() throws IOException {
     }
 
@@ -44,6 +40,8 @@ public class ApiClient {
 
     // Fetch files from the backend
     public static List<FileDTO> listFiles(String path) {
+        String token = ApplicationSession.getJwtToken();
+
         HttpHeaders headers = createHeaders(token);
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
@@ -58,6 +56,7 @@ public class ApiClient {
 
     // Download file content
     public static byte[] downloadFile(String path) {
+        String token = ApplicationSession.getJwtToken();
         HttpHeaders headers = createHeaders(token);
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
@@ -71,6 +70,7 @@ public class ApiClient {
     }
 
     public static void saveFile(String path, String filename, String content, boolean othersCanRead, boolean othersCanWrite) {
+        String token = ApplicationSession.getJwtToken();
         HttpHeaders headers = createHeaders(token);
         headers.setContentType(MediaType.APPLICATION_JSON);  // Ensure JSON format
 
@@ -103,6 +103,7 @@ public class ApiClient {
 
     // Delete file or directory
     public static void deleteFileOrDirectory(String path) {
+        String token = ApplicationSession.getJwtToken();
         HttpHeaders headers = createHeaders(token);
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
@@ -115,6 +116,7 @@ public class ApiClient {
 
     // Create a file
     public static void createFile(String path, String fileName) {
+        String token = ApplicationSession.getJwtToken();
         HttpHeaders headers = createHeaders(token);
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
@@ -127,6 +129,7 @@ public class ApiClient {
 
     // Create a directory
     public static void createDirectory(String path, String dirName) {
+        String token = ApplicationSession.getJwtToken();
         HttpHeaders headers = createHeaders(token);
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
@@ -138,7 +141,7 @@ public class ApiClient {
     }
 
     public static void updatePermissions(String path, boolean canRead, boolean canWrite) throws JsonProcessingException {
-
+        String token = ApplicationSession.getJwtToken();
         System.out.println(path + " " + canRead + " " + canWrite);
         ObjectMapper objectMapper = new ObjectMapper();
         String requestBody = objectMapper.writeValueAsString(new ApiClient.PermissionRequest(path, canRead, canWrite));
@@ -208,6 +211,7 @@ public class ApiClient {
 
     public static void uploadFile(String path, String fileName, File file) throws Exception {
         // Correct MediaType for OkHttp
+        String token = ApplicationSession.getJwtToken();
         uploadFileMultipart(path,fileName,file, token);
     }
 

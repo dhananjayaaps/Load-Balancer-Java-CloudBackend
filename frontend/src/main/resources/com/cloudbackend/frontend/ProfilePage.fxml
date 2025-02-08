@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" spacing="10.0"
+      xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.cloudbackend.frontend.ProfileController">
+
+    <children>
+        <!-- Title -->
+        <Label text="User Profile" style="-fx-font-size: 24px; -fx-font-weight: bold;" />
+
+        <Label text="Username:" />
+        <Label fx:id="usernameLabel" style="-fx-font-size: 16px; -fx-font-weight: bold;" />
+
+        <!-- Change Password Section -->
+        <Label text="Change Password" style="-fx-font-size: 18px; -fx-font-weight: bold; margin-top: 20px;" />
+        <PasswordField fx:id="newPasswordField" promptText="New Password" maxWidth="300.0"/>
+        <PasswordField fx:id="confirmPasswordField" promptText="Confirm Password" maxWidth="300.0"/>
+
+        <!-- Change Password Button -->
+        <Button text="Change Password" fx:id="changePasswordButton" maxWidth="200.0"
+                style="-fx-background-color: #FF9800; -fx-text-fill: white;"
+                onAction="#handleChangePassword"/>
+
+        <!-- Logout Button -->
+        <Button text="Logout" fx:id="logoutButton" maxWidth="150.0"
+                style="-fx-background-color: #f44336; -fx-text-fill: white;"
+                onAction="#handleLogout"/>
+    </children>
+
+    <padding>
+        <Insets top="20.0" left="20.0" right="20.0" bottom="20.0" />
+    </padding>
+</VBox>
