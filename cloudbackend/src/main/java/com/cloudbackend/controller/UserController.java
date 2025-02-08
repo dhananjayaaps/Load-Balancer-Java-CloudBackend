@@ -6,6 +6,8 @@ import com.cloudbackend.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/users")
 public class UserController {
@@ -15,6 +17,13 @@ public class UserController {
     public UserController(UserService userService) {
         this.userService = userService;
     }
+
+    @GetMapping("/allUsers")
+    public ResponseEntity<List<User>> getAllUsers() {
+        List<User> users = userService.getAllUsers();
+        return ResponseEntity.ok(users);
+    }
+
 
     @PostMapping
     public ResponseEntity<User> createUser(@RequestBody UserDTO userDTO) {
@@ -30,5 +39,10 @@ public class UserController {
     @PutMapping("/{id}")
     public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestParam String username, @RequestParam String password, @RequestParam String roleName) {
         return ResponseEntity.ok(userService.updateUser(id, username, password, roleName));
+    }
+
+    @PatchMapping("/{id}/role")
+    public ResponseEntity<User> updateUserRole(@PathVariable Long id, @RequestParam String roleName) {
+        return ResponseEntity.ok(userService.updateUserRole(id, roleName));
     }
 }

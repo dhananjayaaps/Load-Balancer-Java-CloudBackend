@@ -10,6 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -76,4 +77,28 @@ public class UserService {
 
         return userRepository.save(user);
     }
+
+    public User updateUserRole(Long userId, String roleName) {
+        Optional<User> existingUser = userRepository.findById(userId);
+        if (existingUser.isEmpty()) {
+            throw new RuntimeException("User not found");
+        }
+
+        Role role = roleRepository.findByName(roleName);
+        if (role == null) {
+            throw new RuntimeException("Role not found");
+        }
+
+        User user = existingUser.get();
+        Set<Role> roles = new HashSet<>();
+        roles.add(role);
+        user.setRoles(roles);
+
+        return userRepository.save(user);
+    }
+
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+
 }
