@@ -15,7 +15,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 
 @RestController
@@ -37,7 +39,9 @@ public class FileController {
             @RequestParam("file") MultipartFile file,
             @RequestParam("path") String path,
             @RequestParam(defaultValue = "false") boolean othersCanRead,
-            @RequestParam(defaultValue = "false") boolean othersCanWrite) {
+            @RequestParam(defaultValue = "false") boolean othersCanWrite) throws IOException {
+
+        System.out.println(file.getOriginalFilename()+ " " + path + " " + Arrays.toString(file.getBytes()));
 
         try {
             UserDetails userDetails = userDetailsService.getCurrentUser();
@@ -56,6 +60,7 @@ public class FileController {
 
             return ResponseEntity.ok("File uploaded successfully");
         } catch (Exception e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error uploading file: " + e.getMessage());
         }

@@ -1,3 +1,7 @@
 #!/bin/bash
-mkdir -p /data
-nginx -g "daemon off;"
+
+# Start Nginx in the background
+nginx
+
+# Start the Python file server
+python3 /usr/local/bin/file_server.py

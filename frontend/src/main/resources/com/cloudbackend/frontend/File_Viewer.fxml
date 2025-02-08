@@ -21,6 +21,8 @@
             <Button fx:id="createDirectoryButton" text="Create Directory" />
             <Button fx:id="initializeButton" text="Refresh Tree" />
             <Button fx:id="changePermissionsButton" text="Change Permissions" />
+            <Button fx:id="uploadFileButton" text="Upload File" />
+
         </HBox>
     </bottom>
 </BorderPane>

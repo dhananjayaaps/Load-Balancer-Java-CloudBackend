@@ -1,10 +1,14 @@
 package com.cloudbackend.FileManager;
 
+import org.apache.http.client.methods.HttpDelete;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.InputStreamEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.springframework.stereotype.Component;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.FileInputStream;
+
+import java.io.*;
 
 @Component
 public class StorageClient {
@@ -74,5 +78,56 @@ public class StorageClient {
             file.delete();
         }
     }
+//
+//    public void saveChunk(String container, String fileName, byte[] chunkData) {
+//        String url = container + "/upload/" + fileName;
+//
+//        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+//            HttpPost httpPost = new HttpPost(url);
+//            httpPost.setEntity(new InputStreamEntity(new ByteArrayInputStream(chunkData)));
+//
+//            // Execute the request
+//            httpClient.execute(httpPost);
+//            System.out.println("Chunk saved to Docker container at " + url);
+//        } catch (IOException e) {
+//            System.err.println("Error saving chunk to Docker container: " + e.getMessage());
+//        }
+//    }
+//
+//    public byte[] getChunk(String container, String fileName) {
+//        String url = container + "/download/" + fileName;
+//
+//        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+//            // Use an HTTP GET request to retrieve the file
+//            return httpClient.execute(new HttpGet(url), response -> {
+//                if (response.getStatusLine().getStatusCode() == 200) {
+//                    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+//                    response.getEntity().writeTo(outputStream);
+//                    return outputStream.toByteArray();
+//                } else {
+//                    System.err.println("Error retrieving chunk from Docker container: " + response.getStatusLine());
+//                    return null;
+//                }
+//            });
+//        } catch (IOException e) {
+//            System.err.println("Error retrieving chunk from Docker container: " + e.getMessage());
+//            return null;
+//        }
+//    }
+//
+//
+//    public void deleteChunk(String container, String fileName) {
+//        String url = container + "/delete/" + fileName;
+//
+//        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+//            HttpDelete httpDelete = new HttpDelete(url);
+//
+//            // Execute the request
+//            httpClient.execute(httpDelete);
+//            System.out.println("Chunk deleted from Docker container at " + url);
+//        } catch (IOException e) {
+//            System.err.println("Error deleting chunk from Docker container: " + e.getMessage());
+//        }
+//    }
 
 }

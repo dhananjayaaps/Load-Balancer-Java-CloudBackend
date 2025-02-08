@@ -7,9 +7,12 @@ import javafx.scene.control.Alert.AlertType;
 import com.cloudbackend.frontend.ApiClient;
 import com.cloudbackend.frontend.FileDTO;
 import javafx.scene.layout.GridPane;
+import javafx.stage.FileChooser;
 import javafx.util.Pair;
 
+import java.io.File;
 import java.lang.invoke.ConstantBootstraps;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -18,6 +21,9 @@ public class FileViewController {
 
     @FXML
     public Button initializeButton;
+
+    @FXML
+    public Button uploadFileButton;
 
     @FXML
     private TreeView<String> fileTreeView;
@@ -77,7 +83,46 @@ public class FileViewController {
         createDirectoryButton.setOnAction(event -> createDirectoryOnBackend());
         initializeButton.setOnAction(event -> initialize());
         changePermissionsButton.setOnAction(actionEvent -> showPermissionsPopup());
+        uploadFileButton.setOnAction(event -> uploadFileToBackend());
+
     }
+
+    private void uploadFileToBackend() {
+        // Open FileChooser Dialog
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Select File to Upload");
+        File file = fileChooser.showOpenDialog(null);
+
+        if (file != null) {
+            try {
+                // Convert File to Byte Array
+                byte[] fileBytes = Files.readAllBytes(file.toPath());
+
+                // Get the selected folder in TreeView
+                TreeItem<String> selectedItem = fileTreeView.getSelectionModel().getSelectedItem();
+                String uploadPath = "/"; // Default root path
+
+                String path = getFullPathFromTreeItem(selectedItem);
+
+                if (path.length() > 4) {
+                    path = path.substring(4);
+                } else {
+                    path = "/";
+                }
+
+                ApiClient.uploadFile(path, file.getName(), file);
+
+                new Alert(Alert.AlertType.INFORMATION, "File uploaded successfully!").show();
+
+                loadFilesFromBackend(uploadPath);
+
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+                new Alert(Alert.AlertType.ERROR, "Error uploading file: " + e.getMessage()).show();
+            }
+        }
+    }
+
 
     private void loadFilesFromBackend(String path) {
         try {

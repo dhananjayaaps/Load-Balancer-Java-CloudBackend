@@ -6,26 +6,33 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.scene.control.Alert;
 import lombok.Getter;
 import lombok.Setter;
+import okhttp3.*;
 import org.springframework.http.*;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
+import org.springframework.http.MediaType;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+
+import static com.cloudbackend.frontend.FileUploader.uploadFileMultipart;
 
 public class ApiClient {
     private static final String BASE_URL = "http://localhost:8080/files";
     private static final RestTemplate restTemplate = new RestTemplate();
 
+    private static final OkHttpClient client = new OkHttpClient();
+
 //    private static final String token = ApplicationSession.getJwtToken();
-    private static final String token = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsImlhdCI6MTczODk0NzAyMywiZXhwIjoxNzM4OTY1MDIzfQ." +
-        "64mjs3C_X5T2-ddqOdyFoWEGLXTX4crNfLu3fLZ-8CmAZz5zYkBYfdenNXm27XMiebROfIOcKmof0fbQCP8qtQ";
+    private static final String token = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsImlhdCI6MTczODk4NTczOCwiZXhwIjoxNzM5MDAzNzM4fQ." +
+        "eEO8yeF9_EsY2zhGOAm-yC52o2VfXxFHqDtkwMw7SkEwqvIA_sHOYAC_VjGWXT6qsc_sqXiYuupkyNy8Ccx01w";
+
+    public ApiClient() throws IOException {
+    }
 
     // Helper method to create headers with Bearer Token
     private static HttpHeaders createHeaders(String token) {
@@ -198,4 +205,11 @@ public class ApiClient {
             this.canWrite = canWrite;
         }
     }
+
+    public static void uploadFile(String path, String fileName, File file) throws Exception {
+        // Correct MediaType for OkHttp
+        uploadFileMultipart(path,fileName,file, token);
+    }
+
+
 }

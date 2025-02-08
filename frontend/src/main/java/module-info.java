@@ -8,6 +8,9 @@ module com.cloudbackend.frontend {
     requires spring.web;
     requires spring.core;
     requires static lombok;
+    requires okhttp3;
+    requires org.apache.httpcomponents.client5.httpclient5;
+    requires org.apache.httpcomponents.core5.httpcore5;
 
     // Open package to both JavaFX and Jackson
     opens com.cloudbackend.frontend to javafx.fxml, com.fasterxml.jackson.databind;
