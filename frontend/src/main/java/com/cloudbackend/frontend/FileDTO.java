@@ -81,4 +81,8 @@ public class FileDTO {
     public void setDirectory(boolean directory) {
         isDirectory = directory;
     }
+
+    public void setIsDirectory(boolean isDirectory) {
+        this.isDirectory = isDirectory;
+    }
 }

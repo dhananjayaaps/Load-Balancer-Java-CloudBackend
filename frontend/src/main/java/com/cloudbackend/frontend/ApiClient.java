@@ -215,5 +215,4 @@ public class ApiClient {
         uploadFileMultipart(path,fileName,file, token);
     }
 
-
 }

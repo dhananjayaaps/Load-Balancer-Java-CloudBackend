@@ -61,7 +61,9 @@ public class FileViewController {
         fileTreeView.setRoot(rootItem);
 
         // Load files from backend
-        loadFilesFromBackend("/");
+//        loadFilesFromBackend("/");
+        loadFilesFromDB("/");
+        syncFiles();
 
         fileTreeView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != null) {
@@ -128,8 +130,9 @@ public class FileViewController {
 
                 new Alert(Alert.AlertType.INFORMATION, "File uploaded successfully!").show();
 
-                loadFilesFromBackend(uploadPath);
-
+//                loadFilesFromBackend(uploadPath);
+                syncFiles();
+                loadFilesFromDB("/");
             } catch (Exception e) {
                 System.out.println(e.getMessage());
                 new Alert(Alert.AlertType.ERROR, "Error uploading file: " + e.getMessage()).show();
@@ -143,11 +146,27 @@ public class FileViewController {
             List<FileDTO> files = ApiClient.listFiles(path);
             for (FileDTO file : files) {
                 addFileItemToTree(file);
+                SQLiteHelper.saveFile(file);
             }
         } catch (Exception e) {
             System.out.println("Error loading files: " + e.getMessage());
-            new Alert(AlertType.ERROR, "Error loading files: " + e.getMessage()).show();
+            new Alert(Alert.AlertType.ERROR, "Error loading files: " + e.getMessage()).show();
         }
+    }
+
+
+    private void loadFilesFromDB(String path) {
+        try {
+            List<FileDTO> localFiles = SQLiteHelper.getAllFiles();
+            for (FileDTO file : localFiles) {
+                addFileItemToTree(file);
+                SQLiteHelper.saveFile(file);
+            }
+        } catch (Exception e) {
+            System.out.println("Error loading files: " + e.getMessage());
+            new Alert(Alert.AlertType.ERROR, "Error loading files: " + e.getMessage()).show();
+        }
+
     }
 
     private void loadFileContentFromBackend(String path) {
@@ -209,6 +228,7 @@ public class FileViewController {
                 try {
                     ApiClient.deleteFileOrDirectory(path);
                     selectedItem.getParent().getChildren().remove(selectedItem);
+                    syncFiles();
                     new Alert(AlertType.INFORMATION, "Deleted successfully").show();
                 } catch (Exception e) {
                     new Alert(AlertType.ERROR, "Error deleting: " + e.getMessage()).show();
@@ -256,7 +276,9 @@ public class FileViewController {
                     try {
                         String fullPath = parentPath.endsWith("/") ? parentPath + fileName : parentPath;
                         ApiClient.createFile(fullPath, fileName);
-                        loadFilesFromBackend(parentPath);
+//                        loadFilesFromBackend(parentPath);
+                        syncFiles();
+                        loadFilesFromDB(parentPath);
                     } catch (Exception e) {
                         new Alert(AlertType.ERROR, "Error creating file: " + e.getMessage()).show();
                     }
@@ -296,7 +318,9 @@ public class FileViewController {
                     try {
                         String fullPath = parentPath.endsWith("/") ? parentPath + dirName : parentPath;
                         ApiClient.createDirectory(fullPath, dirName);
-                        loadFilesFromBackend(parentPath); // Refresh the list
+//                        loadFilesFromBackend(parentPath); // Refresh the list
+                        syncFiles();
+                        loadFilesFromDB(parentPath);
                     } catch (Exception e) {
                         new Alert(AlertType.ERROR, "Error creating directory: " + e.getMessage()).show();
                     }
@@ -466,4 +490,99 @@ public class FileViewController {
             }
         });
     }
+
+    private void syncFiles() {
+        try {
+            // Step 1: Load dataset from the local database
+            List<FileDTO> localFiles = SQLiteHelper.getAllFiles();
+
+            // Step 2: Fetch dataset from the backend endpoint (Assume the method is defined in ApiClient)
+            List<FileDTO> backendFiles = ApiClient.listFiles("/");
+
+            // Step 3: Compare the two datasets (localFiles and backendFiles)
+            if (!isFileSetsEqual(localFiles, backendFiles)) {
+                // Step 4: If there's a change, update the local file structure and database
+                updateFileStructure(localFiles, backendFiles);
+                initialize();
+
+            } else {
+                // No change, no need to do anything
+                System.out.println("No changes detected between local and backend file sets.");
+            }
+        } catch (Exception e) {
+            System.out.println("Error syncing files: " + e.getMessage());
+        }
+    }
+
+    private boolean isFileSetsEqual(List<FileDTO> localFiles, List<FileDTO> backendFiles) {
+        // If the number of files is different, the sets are not equal
+        if (localFiles.size() != backendFiles.size()) {
+            return false;
+        }
+
+        // Check if all files match based on path (and other attributes if necessary)
+        for (FileDTO backendFile : backendFiles) {
+            boolean fileFound = localFiles.stream().anyMatch(localFile -> localFile.getPath().equals(backendFile.getPath()));
+            if (!fileFound) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private void updateFileStructure(List<FileDTO> localFiles, List<FileDTO> backendFiles) {
+        try {
+            // Step 1: Identify new files that need to be added
+            for (FileDTO backendFile : backendFiles) {
+                FileDTO existingFile = findFileInList(localFiles, backendFile.getPath());
+                if (existingFile == null) {
+                    // New file, add it to the database and local structure
+                    SQLiteHelper.saveFile(backendFile);
+                    System.out.println("Added new file: " + backendFile.getPath());
+                }
+            }
+
+            // Step 2: Identify files that need to be deleted (present in local but not in backend)
+            for (FileDTO localFile : localFiles) {
+                boolean existsInBackend = backendFiles.stream().anyMatch(backendFile -> backendFile.getPath().equals(localFile.getPath()));
+                if (!existsInBackend) {
+                    // File is deleted from backend, remove it from local database
+                    SQLiteHelper.deleteFile(localFile.getPath());
+                    System.out.println("Deleted file: " + localFile.getPath());
+                }
+            }
+
+            // Step 3: Identify modified files (present in both local and backend but with different properties)
+            for (FileDTO backendFile : backendFiles) {
+                FileDTO existingFile = findFileInList(localFiles, backendFile.getPath());
+                if (existingFile != null && !isFileEqual(existingFile, backendFile)) {
+                    // File is modified, update it in the database
+                    SQLiteHelper.saveFile(backendFile);
+                    System.out.println("Updated file: " + backendFile.getPath());
+                }
+            }
+
+        } catch (Exception e) {
+            System.out.println("Error updating file structure: " + e.getMessage());
+        }
+    }
+
+    private FileDTO findFileInList(List<FileDTO> fileList, String path) {
+        return fileList.stream()
+                .filter(file -> file.getPath().equals(path))
+                .findFirst()
+                .orElse(null);  // Returns null if file not found
+    }
+
+    private boolean isFileEqual(FileDTO file1, FileDTO file2) {
+        // Compare file properties (size, permissions, etc.)
+        return file1.getSize().equals(file2.getSize()) &&
+                file1.isCanRead() == file2.isCanRead() &&
+                file1.isCanWrite() == file2.isCanWrite() &&
+                file1.isOthersCanRead() == file2.isOthersCanRead() &&
+                file1.isOthersCanWrite() == file2.isOthersCanWrite() &&
+                file1.isDirectory() == file2.isDirectory();
+    }
+
 }
