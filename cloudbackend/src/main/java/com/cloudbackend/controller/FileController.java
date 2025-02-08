@@ -41,8 +41,6 @@ public class FileController {
             @RequestParam(defaultValue = "false") boolean othersCanRead,
             @RequestParam(defaultValue = "false") boolean othersCanWrite) throws IOException {
 
-        System.out.println(file.getOriginalFilename()+ " " + path + " " + Arrays.toString(file.getBytes()));
-
         try {
             UserDetails userDetails = userDetailsService.getCurrentUser();
             User user = userRepository.findByUsername(userDetails.getUsername()).get();

@@ -156,33 +156,46 @@ public class FileService {
         return merged;
     }
 
-    public byte[] downloadFile(String filePath, User requester, boolean autoPermission) throws Exception{
+    public byte[] downloadFile(String filePath, User requester, boolean autoPermission) throws Exception {
         try {
             FileMetadata metadata = fileMetadataRepository.findByPath(filePath)
                     .orElseThrow(() -> new RuntimeException("File not found"));
 
-            if(autoPermission){
+            if (autoPermission) {
                 System.out.println("Copy is processing");
-            }
-            else if (!hasReadAccess(metadata, requester)) {
+            } else if (!hasReadAccess(metadata, requester)) {
                 throw new SecurityException("No read permission");
             }
+
             trafficController.acquireDownloadSlot();
 
             int totalChunks = metadata.getTotalChunks();
             List<String> containers = List.of(storageContainers.split(","));
-
             byte[] fileData = new byte[0];
 
-            // Use metadata.getName() to construct chunk names
             for (int i = 0; i < totalChunks; i++) {
-                String targetContainer = loadBalancer.getNextContainer(containers);
-                String chunkName = metadata.getName() + "_chunk_" + i; // Use the generated filename
-                byte[] encryptedChunk = storageClient.getChunk(targetContainer, chunkName);
+                String chunkName = metadata.getName() + "_chunk_" + i;
+                byte[] encryptedChunk = null;
 
+                // Try fetching the chunk from available containers
+                for (String container : containers) {
+                    encryptedChunk = storageClient.getChunk(container, chunkName);
+                    if (encryptedChunk != null) {
+                        break; // Found the chunk, move to decryption
+                    }
+                }
+
+                if (encryptedChunk == null) {
+                    System.err.println("Chunk missing: " + chunkName + ". Skipping...");
+                    continue; // Skip this chunk if not found in any container
+                }
+
+                // Decrypt and merge
                 byte[] decryptedChunk = AESUtils.decrypt(new String(encryptedChunk), encryptionKey);
                 if (decryptedChunk != null) {
                     fileData = mergeChunks(fileData, decryptedChunk);
+                } else {
+                    System.err.println("Failed to decrypt chunk: " + chunkName);
                 }
             }
 
@@ -312,13 +325,24 @@ public class FileService {
 
     private void deleteChunks(FileMetadata fileMetadata) {
         List<String> containers = List.of(storageContainers.split(","));
+
         for (int i = 0; i < fileMetadata.getTotalChunks(); i++) {
             String chunkName = fileMetadata.getName() + "_chunk_" + i;
+            boolean deleted = false;
+
             for (String container : containers) {
-                storageClient.deleteChunk(container, chunkName);
+                if (storageClient.deleteChunk(container, chunkName)) { // Ensure deleteChunk returns success
+                    deleted = true;
+                    break; // Stop searching once deleted
+                }
+            }
+
+            if (!deleted) {
+                System.err.println("Chunk not found for deletion: " + chunkName);
             }
         }
     }
+
 
     public void updateFile(String fileNameOriginal, byte[] fileData, User owner, String path,
                            String schedulingAlgorithm, List<Integer> priorities,

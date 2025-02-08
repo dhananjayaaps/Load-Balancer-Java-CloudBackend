@@ -1,34 +1,31 @@
 version: "3.8"
 
 services:
-#   loadbalancer:
-#     build:
-#       context: ./cloudbackend
-#       dockerfile: Dockerfile
-#     ports:
-#       - "8080:8080"
-#     environment:
-#       - STORAGE_CONTAINERS=http://storage1:8081,http://storage2:8082
-#     depends_on:
-#       - storage1
-#       - storage2
-
-  storage1:
-    build:
-      context: ./storage
-    volumes:
-      - storage1_data:/data
+  chunk-manager-1:
+    build: ./storage
+    container_name: chunk-container-1
     ports:
-      - "8081:80"
-
-  storage2:
-    build:
-      context: ./storage
+      - "8081:5000"
     volumes:
-      - storage2_data:/data
+      - chunk_storage_1:/chunks
+
+  chunk-manager-2:
+    build: ./storage
+    container_name: chunk-container-2
     ports:
-      - "8082:80"
+      - "8082:5000"
+    volumes:
+      - chunk_storage_2:/chunks
+
+  chunk-manager-3:
+    build: ./storage
+    container_name: chunk-container-3
+    ports:
+      - "8083:5000"
+    volumes:
+      - chunk_storage_3:/chunks
 
 volumes:
-  storage1_data:
-  storage2_data:
+  chunk_storage_1:
+  chunk_storage_2:
+  chunk_storage_3:

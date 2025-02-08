@@ -1,21 +1,26 @@
-# Use the base image
+# Use the specified base image
 FROM pedrombmachado/ntu_lubuntu:comp20081
 
-# Update apt and install nginx, python3, and pip
-RUN apt-get update && apt-get install -y nginx python3 python3-pip && rm -rf /var/lib/apt/lists/*
+# Set working directory
+WORKDIR /app
 
-# Install necessary Python packages (e.g., Flask)
-# RUN pip3 install Flask
+# Install Python and pip
+RUN apt update && apt install -y python3 python3-pip python3-venv
 
-# Copy the storage configuration script and custom Python file upload handler
-COPY storage_config.sh /usr/local/bin/storage_config.sh
-COPY file_server.py /usr/local/bin/file_server.py
+# Create and activate virtual environment
+RUN python3 -m venv /app/venv
 
-# Make the scripts executable
-RUN chmod +x /usr/local/bin/storage_config.sh /usr/local/bin/file_server.py
+# Copy application files
+COPY app.py requirements.txt /app/
 
-# Expose ports for Nginx and Python server
-EXPOSE 80 8080
+# Create directory for storing chunks
+RUN mkdir -p /chunks
 
-# Start Nginx and the Python file upload server
-CMD ["bash", "/usr/local/bin/storage_config.sh"]
+# Install dependencies into the virtual environment
+RUN /app/venv/bin/pip install --no-cache-dir -r requirements.txt
+
+# Expose the Flask port
+EXPOSE 5000
+
+# Run the Flask application using the virtual environment's Python
+CMD ["/app/venv/bin/python", "app.py"]
