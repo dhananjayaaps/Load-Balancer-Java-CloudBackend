@@ -63,8 +63,6 @@ public class FileViewController {
         rootItem.setExpanded(true);
         fileTreeView.setRoot(rootItem);
 
-        // Load files from backend
-//        loadFilesFromBackend("/");
         loadFilesFromDB("/");
         syncFiles();
 

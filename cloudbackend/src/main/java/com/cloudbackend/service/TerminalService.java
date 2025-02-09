@@ -1,5 +1,6 @@
 package com.cloudbackend.service;
 
+import ch.qos.logback.core.joran.sanity.Pair;
 import com.cloudbackend.FileManager.FileService;
 import com.cloudbackend.dto.FileDTO;
 import com.cloudbackend.entity.FileMetadata;
@@ -8,7 +9,9 @@ import com.cloudbackend.repository.FileMetadataRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.util.*;
+
+import java.awt.desktop.SystemEventListener;
 
 @Service
 public class TerminalService {
@@ -108,24 +111,71 @@ public class TerminalService {
         return "Current user: " + user.getUsername();
     }
 
-    // tree (List directory structure recursively)
+
     public String listDirectoryTree(String path, User user) {
         try {
             StringBuilder tree = new StringBuilder();
-            listDirectoryTreeRecursive(path, user, tree, 0);
+            Set<String> visitedPaths = new HashSet<>();
+            Queue<Pair<String, Integer>> queue = new LinkedList<>();
+            queue.add(new Pair<>(path, 0));
+            visitedPaths.add(path);
+
+            while (!queue.isEmpty()) {
+                Pair<String, Integer> current = queue.poll();
+                String currentPath = current.first;
+                int depth = current.second;
+
+                String name = extractNameFromPath(currentPath);
+                tree.append("  ".repeat(depth)).append(name).append("\n");
+
+                List<FileMetadata> files = fileService.buildTreeForTerminal(currentPath);
+                if (files != null && !files.isEmpty()) {
+                    for (FileMetadata file : files) {
+                        String filePath = file.getPath();
+
+                        // Only enqueue if it is a directory. If it’s a file, simply print it.
+                        if (file.isDirectory()) {
+                            if (!visitedPaths.contains(filePath)) {
+                                queue.add(new Pair<>(filePath, depth + 1));
+                                visitedPaths.add(filePath);
+                            }
+                        } else {
+                            // Print the file as a leaf node.
+                            tree.append("  ".repeat(depth + 1))
+                                    .append(extractNameFromPath(filePath))
+                                    .append("\n");
+                        }
+                    }
+                }
+            }
             return tree.toString();
         } catch (Exception e) {
             throw new RuntimeException("Failed to list directory tree: " + e.getMessage(), e);
         }
     }
 
-    private void listDirectoryTreeRecursive(String path, User user, StringBuilder tree, int depth) {
-        List<FileDTO> files = fileService.buildTree(path, user);
-        for (FileDTO file : files) {
-            tree.append("  ".repeat(depth)).append(file.getPath()).append("\n");
-            if (file.isDirectory()) {
-                listDirectoryTreeRecursive(file.getPath(), user, tree, depth + 1);
-            }
+
+
+    // Helper method to extract the name from a path
+    private String extractNameFromPath(String path) {
+        if (path == null || path.isEmpty()) {
+            return "";
+        }
+        int lastSlashIndex = path.lastIndexOf('/');
+        if (lastSlashIndex == -1) {
+            return path;
+        }
+        return path.substring(lastSlashIndex + 1);
+    }
+
+    // Define a simple Pair class if not using a suitable existing one
+    private static class Pair<T, U> {
+        public final T first;
+        public final U second;
+
+        public Pair(T first, U second) {
+            this.first = first;
+            this.second = second;
         }
     }
 
