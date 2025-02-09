@@ -23,6 +23,7 @@
             <Button fx:id="changePermissionsButton" text="Change Permissions" />
             <Button fx:id="uploadFileButton" text="Upload File" />
             <Button fx:id="profileButton" text="Profile" />
+            <Button fx:id="adminButton" text="Admin" />
         </HBox>
     </bottom>
 </BorderPane>

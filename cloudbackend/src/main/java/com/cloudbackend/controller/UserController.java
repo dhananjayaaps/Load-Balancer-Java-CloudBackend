@@ -41,8 +41,9 @@ public class UserController {
         return ResponseEntity.ok(userService.updateUser(id, username, password, roleName));
     }
 
-    @PatchMapping("/{id}/role")
-    public ResponseEntity<User> updateUserRole(@PathVariable Long id, @RequestParam String roleName) {
+    @PostMapping("/changeRole/{id}/{roleName}")
+    public ResponseEntity<User> updateUserRole(@PathVariable Long id, @PathVariable String roleName) {
+        System.out.println(id + roleName);
         return ResponseEntity.ok(userService.updateUserRole(id, roleName));
     }
 }

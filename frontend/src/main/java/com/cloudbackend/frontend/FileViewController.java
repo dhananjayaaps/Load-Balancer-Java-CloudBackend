@@ -27,6 +27,9 @@ public class FileViewController {
     public Button uploadFileButton;
 
     @FXML
+    public Button adminButton;
+
+    @FXML
     private TreeView<String> fileTreeView;
 
     @FXML
@@ -97,6 +100,17 @@ public class FileViewController {
                 throw new RuntimeException(e);
             }
         });
+        adminButton.setOnAction(actionEvent -> {
+            try {
+                gotoAdmin();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    private void gotoAdmin() throws IOException {
+        App.setRoot("UserManagement");
     }
 
     private void gotoProfile() throws IOException {
