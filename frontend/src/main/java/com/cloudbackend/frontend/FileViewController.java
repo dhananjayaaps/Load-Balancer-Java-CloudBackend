@@ -236,7 +236,7 @@ public class FileViewController {
                 itemOwner = itemOwner.substring(1); // Remove the first character
             }
 
-            if (Objects.equals(itemOwner, user)) {
+            if (Objects.equals(itemOwner, ApplicationSession.getUsername())) {
                 try {
                     ApiClient.deleteFileOrDirectory(path);
                     selectedItem.getParent().getChildren().remove(selectedItem);
@@ -284,7 +284,7 @@ public class FileViewController {
                     directoryOwner = directoryOwner.substring(1); // Remove the first character
                 }
 
-                if (Objects.equals(directoryOwner, user)) {
+                if (Objects.equals(directoryOwner, ApplicationSession.getUsername())) {
                     try {
                         String fullPath = parentPath.endsWith("/") ? parentPath + fileName : parentPath;
                         ApiClient.createFile(fullPath, fileName);
@@ -326,7 +326,7 @@ public class FileViewController {
                     directoryOwner = directoryOwner.substring(1); // Remove the first character
                 }
 
-                if (Objects.equals(directoryOwner, user)) {
+                if (Objects.equals(directoryOwner, ApplicationSession.getUsername())) {
                     try {
                         String fullPath = parentPath.endsWith("/") ? parentPath + dirName : parentPath;
                         ApiClient.createDirectory(fullPath, dirName);
@@ -491,7 +491,7 @@ public class FileViewController {
                     directoryOwner = directoryOwner.substring(1); // Remove the first character
                 }
 
-                if (directoryOwner.equals(user)){
+                if (directoryOwner.equals(ApplicationSession.getUsername())){
                     ApiClient.updatePermissions(filepath, canRead, canWrite);
                 }else{
                     new Alert(AlertType.ERROR, "Unauthorized").show();
@@ -505,20 +505,15 @@ public class FileViewController {
 
     private void syncFiles() {
         try {
-            // Step 1: Load dataset from the local database
             List<FileDTO> localFiles = SQLiteHelper.getAllFiles();
 
-            // Step 2: Fetch dataset from the backend endpoint (Assume the method is defined in ApiClient)
             List<FileDTO> backendFiles = ApiClient.listFiles("/");
 
-            // Step 3: Compare the two datasets (localFiles and backendFiles)
             if (!isFileSetsEqual(localFiles, backendFiles)) {
-                // Step 4: If there's a change, update the local file structure and database
-                updateFileStructure(localFiles, backendFiles);
+               updateFileStructure(localFiles, backendFiles);
                 initialize();
 
             } else {
-                // No change, no need to do anything
                 System.out.println("No changes detected between local and backend file sets.");
             }
         } catch (Exception e) {

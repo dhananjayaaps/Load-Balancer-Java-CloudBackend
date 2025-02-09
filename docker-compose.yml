@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   chunk-manager-1:
     build: ./storage
