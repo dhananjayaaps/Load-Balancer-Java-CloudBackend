@@ -2,16 +2,20 @@ package com.cloudbackend.ssh;
 
 import com.cloudbackend.entity.User;
 import com.cloudbackend.service.TerminalService;
+import com.cloudbackend.util.TextTreeGenerator;
 import org.apache.sshd.server.Environment;
 import org.apache.sshd.server.ExitCallback;
 import org.apache.sshd.server.channel.ChannelSession;
 import org.apache.sshd.server.command.Command;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
 
 public class SshTerminal implements Command, Runnable {
 
     private final TerminalService terminalService;
+
+    TextTreeGenerator textTreeGenerator;
     private final User user;
 
     private InputStream in;
@@ -121,7 +125,8 @@ public class SshTerminal implements Command, Runnable {
                     output += terminalService.whoami(user);
                     break;
                 case "tree":
-                    output += terminalService.listDirectoryTree(parts.length > 1 ? parts[1] : "/", user);
+                    output += String.join("\r\n", terminalService.generateFileTree("/", user));
+//                    output += t;
                     break;
                 case "nano":
                     output += (parts.length < 2) ? "Usage: nano <file-path> [content]"

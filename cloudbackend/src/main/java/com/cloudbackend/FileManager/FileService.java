@@ -438,19 +438,4 @@ public class FileService {
                 .collect(Collectors.toList());
     }
 
-
-    public List<FileDTO> buildTreeForTerminal(String path) {
-        List<FileMetadata> files = fileMetadataRepository.findByPathStartingWith(path);
-        System.out.println(files);
-        return files.stream()
-                .map(file -> new FileDTO(
-                        file.getPath(),
-                        file.getSize(),
-                        false,
-                        false,
-                        true, true,
-                        file.isDirectory()
-                ))
-                .collect(Collectors.toList());
-    }
 }
