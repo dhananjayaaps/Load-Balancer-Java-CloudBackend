@@ -25,7 +25,23 @@ services:
     volumes:
       - chunk_storage_3:/chunks
 
+  mysql-db:
+    image: mysql:8.0
+    container_name: mysql-container
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: mydatabase
+      MYSQL_USER: myuser
+      MYSQL_PASSWORD: mypassword
+    ports:
+      - "3306:3306"  # Expose MySQL on localhost
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: ["mysqld", "--bind-address=0.0.0.0"]  # Allow external access
+
 volumes:
   chunk_storage_1:
   chunk_storage_2:
   chunk_storage_3:
+  mysql_data:
