@@ -1,5 +1,7 @@
 package com.cloudbackend.frontend;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -11,6 +13,9 @@ import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpResponse;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -73,35 +78,39 @@ public class UserManagementController {
     }
 
     @FXML
-    private void updateUserRole(ActionEvent event) {
+    private boolean updateUserRole(ActionEvent event) {
         try {
             Long userId = Long.parseLong(userIdField.getText());
             String newRole = roleField.getText().trim();
 
-            // Use RestTemplate directly (temporary fix)
-            RestTemplate restTemplate = RestTemplateConfig.createRestTemplate();
-
-            HttpHeaders headers = getHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
             Map<String, String> roleUpdate = new HashMap<>();
-            roleUpdate.put("role", newRole);
+            // Create JSON request payload
+            ObjectMapper objectMapper = new ObjectMapper();
+            String requestBody = objectMapper.writeValueAsString(new changeRoleRequest(userId, newRole));
 
-            HttpEntity<Map<String, String>> entity = new HttpEntity<>(roleUpdate, headers);
-            String url = BASE_URL + "/" + userId + "/role";
+            // Create HTTP request
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(URI.create(BASE_URL + "/role"))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + ApplicationSession.getJwtToken())
+                    .method("POST", java.net.http.HttpRequest.BodyPublishers.ofString(requestBody))
+                    .build();
 
-            ResponseEntity<String> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.PATCH,
-                    entity,
-                    String.class
-            );
-
-            showAlert("Success", "User role updated successfully.");
-            loadUserList();
+            // Send HTTP request
+            HttpClient client = HttpClient.newHttpClient();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            System.out.println(response.body());
+            // Handle response
+            if (response.statusCode() == 200) {
+                loadUserList();
+                return true;
+            } else {
+                return false;
+            }
         } catch (Exception e) {
-            showAlert("Error", "Update failed: " + e.getMessage());
             e.printStackTrace();
+            return false;
+//            showAlert(Alert.AlertType.ERROR, "Error", "Failed to connect to the server: " + e.getMessage());
         }
     }
 
@@ -132,6 +141,20 @@ public class UserManagementController {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    class changeRoleRequest {
+        @JsonProperty
+        private Long id;
+
+        @JsonProperty
+        private String role;
+
+        public changeRoleRequest(Long userId, String role) {
+            this.id = userId;
+            this.role = role;
+        }
+
     }
 
 }

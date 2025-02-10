@@ -44,7 +44,7 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers( "/auth/**", "/health").permitAll()
-                        .requestMatchers("/users/allUsers", "/users/{id}/role", "/{id}").hasAnyRole("ADMIN")
+//                        .requestMatchers("/users/allUsers").hasAnyRole("ADMIN")
                         .requestMatchers("/users/**").permitAll()
                         .requestMatchers("/files/myfiles").authenticated()
                         .requestMatchers("/files/**").permitAll()

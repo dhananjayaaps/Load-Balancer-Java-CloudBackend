@@ -51,12 +51,13 @@ public class UserController {
         return ResponseEntity.ok(userService.updateUser(id, username, password, roleName));
     }
 
-    @PatchMapping("/{id}/role")
+    @PostMapping("/role")
     public ResponseEntity<?> updateUserRole(
-            @PathVariable Long id,
+//            @PathVariable Long id,
             @RequestBody Map<String, String> request
     ) {
         String roleName = request.get("role");
+        Long id = Long.valueOf(request.get("id"));
         if (roleName == null || roleName.trim().isEmpty()) {
             return ResponseEntity.badRequest().body("Role name is required");
         }
