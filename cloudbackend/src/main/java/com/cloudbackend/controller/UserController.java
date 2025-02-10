@@ -1,9 +1,14 @@
 package com.cloudbackend.controller;
 
 import com.cloudbackend.dto.UserDTO;
+import com.cloudbackend.dto.UserDetailsResponse;
 import com.cloudbackend.entity.User;
+import com.cloudbackend.repository.UserRepository;
+import com.cloudbackend.service.CustomUserDetailsService;
 import com.cloudbackend.service.UserService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,9 +19,13 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
+    private final CustomUserDetailsService userDetailsService;
+    private final UserRepository userRepository;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, CustomUserDetailsService userDetailsService, UserRepository userRepository) {
         this.userService = userService;
+        this.userDetailsService = userDetailsService;
+        this.userRepository = userRepository;
     }
 
     @GetMapping("/allUsers")
@@ -54,6 +63,28 @@ public class UserController {
 
         userService.updateUserRole(id, roleName);
         return ResponseEntity.ok().build(); // Return 200 OK with no body
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+            @RequestBody Map<String, String> request
+    ) {
+        UserDetails userDetails = userDetailsService.getCurrentUser();
+        User user = userRepository.findByUsername(userDetails.getUsername()).orElseThrow(() -> new RuntimeException("User not found"));
+
+        String currentPassword = request.get("currentPassword");
+        String newPassword = request.get("newPassword");
+
+        if (currentPassword == null || newPassword == null || currentPassword.trim().isEmpty() || newPassword.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Current password and new password are required");
+        }
+
+        try {
+            userService.changePassword(user.getId(), currentPassword, newPassword);
+            return ResponseEntity.ok().build(); // Return 200 OK with no body
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
 }

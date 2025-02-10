@@ -101,4 +101,19 @@ public class UserService {
         return userRepository.findAll();
     }
 
+    public void changePassword(Long userId, String currentPassword, String newPassword) {
+        Optional<User> existingUser = userRepository.findById(userId);
+        if (existingUser.isEmpty()) {
+            throw new RuntimeException("User not found");
+        }
+
+        User user = existingUser.get();
+
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new RuntimeException("Current password is incorrect");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
 }

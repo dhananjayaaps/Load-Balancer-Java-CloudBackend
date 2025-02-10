@@ -22,5 +22,13 @@ RUN /app/venv/bin/pip install --no-cache-dir -r requirements.txt
 # Expose the Flask port
 EXPOSE 5000
 
+# Install SSH Server in the container
+RUN apt update && apt install -y openssh-server
+RUN mkdir /var/run/sshd
+RUN echo 'root:root' | chpasswd  # Set root password (change this in production)
+RUN sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+
+EXPOSE 22
+
 # Run the Flask application using the virtual environment's Python
-CMD ["/app/venv/bin/python", "app.py"]
+CMD service ssh start && /app/venv/bin/python app.py
