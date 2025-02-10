@@ -7,8 +7,12 @@ import org.springframework.web.client.RestTemplate;
 
 public class RestTemplateConfig {
     public static RestTemplate createRestTemplate() {
-        CloseableHttpClient httpClient = HttpClients.createDefault();
-        HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory(httpClient);
+        CloseableHttpClient httpClient = HttpClients.custom()
+                .build();
+
+        HttpComponentsClientHttpRequestFactory factory =
+                new HttpComponentsClientHttpRequestFactory(httpClient);
+
         return new RestTemplate(factory);
     }
 }

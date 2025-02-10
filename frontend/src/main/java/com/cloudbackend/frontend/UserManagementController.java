@@ -12,7 +12,9 @@ import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class UserManagementController {
 
@@ -74,21 +76,31 @@ public class UserManagementController {
     private void updateUserRole(ActionEvent event) {
         try {
             Long userId = Long.parseLong(userIdField.getText());
-            String newRole = roleField.getText();
+            String newRole = roleField.getText().trim();
 
-            RestTemplate restTemplate = RestTemplateConfig.createRestTemplate(); // Use the new RestTemplate
+            // Use RestTemplate directly (temporary fix)
+            RestTemplate restTemplate = RestTemplateConfig.createRestTemplate();
 
-            HttpEntity<String> entity = new HttpEntity<>(getHeaders());
-            String url = BASE_URL + "/" + userId + "/role?roleName=" + newRole;
+            HttpHeaders headers = getHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
 
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.PATCH, entity, String.class);
+            Map<String, String> roleUpdate = new HashMap<>();
+            roleUpdate.put("role", newRole);
 
-            System.out.println("Response: " + response.getBody()); // Debugging: Print response
+            HttpEntity<Map<String, String>> entity = new HttpEntity<>(roleUpdate, headers);
+            String url = BASE_URL + "/" + userId + "/role";
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.PATCH,
+                    entity,
+                    String.class
+            );
 
             showAlert("Success", "User role updated successfully.");
             loadUserList();
         } catch (Exception e) {
-            showAlert("Error", "Failed to update user role: " + e.getMessage());
+            showAlert("Error", "Update failed: " + e.getMessage());
             e.printStackTrace();
         }
     }

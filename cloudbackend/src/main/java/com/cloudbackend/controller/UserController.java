@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/users")
@@ -41,9 +42,18 @@ public class UserController {
         return ResponseEntity.ok(userService.updateUser(id, username, password, roleName));
     }
 
-    @PostMapping("/changeRole/{id}/{roleName}")
-    public ResponseEntity<User> updateUserRole(@PathVariable Long id, @PathVariable String roleName) {
-        System.out.println(id + roleName);
-        return ResponseEntity.ok(userService.updateUserRole(id, roleName));
+    @PatchMapping("/{id}/role")
+    public ResponseEntity<?> updateUserRole(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request
+    ) {
+        String roleName = request.get("role");
+        if (roleName == null || roleName.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Role name is required");
+        }
+
+        userService.updateUserRole(id, roleName);
+        return ResponseEntity.ok().build(); // Return 200 OK with no body
     }
+
 }
