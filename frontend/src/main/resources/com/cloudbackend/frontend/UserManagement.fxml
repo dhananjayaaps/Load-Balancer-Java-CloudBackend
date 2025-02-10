@@ -30,5 +30,6 @@
             <Button text="Delete User" onAction="#deleteUser" style="-fx-background-color: red; -fx-text-fill: white;" />
         </HBox>
     </VBox>
-    <Button fx:id="homeButton" text="Admin" />
+    <Button fx:id="homeButton" text="Back" onAction="#homeButton" />
+
 </AnchorPane>

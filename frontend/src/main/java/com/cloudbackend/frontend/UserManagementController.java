@@ -6,10 +6,7 @@ import javafx.scene.control.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.cell.PropertyValueFactory;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
+
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 
@@ -113,12 +110,8 @@ public class UserManagementController {
     }
 
     @FXML
-    private void homeButton() {
-        try {
-            App.setRoot("UserManagement");
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+    private void homeButton() throws IOException {
+            App.setRoot("File_Viewer");
     }
 
     private void showAlert(String title, String message) {

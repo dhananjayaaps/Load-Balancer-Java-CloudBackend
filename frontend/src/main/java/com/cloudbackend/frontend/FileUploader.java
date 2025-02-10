@@ -14,7 +14,7 @@ public class FileUploader {
         // Building the multipart request body
         RequestBody body = new MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
-                .addFormDataPart("path", path)
+                .addFormDataPart("path", path + "/")
                 .addFormDataPart("fileName", fileName)
                 .addFormDataPart("file", file.getName(), RequestBody.create(mediaType, file))
                 .build();

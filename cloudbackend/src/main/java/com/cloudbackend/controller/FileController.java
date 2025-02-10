@@ -18,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -51,7 +52,7 @@ public class FileController {
                     user,
                     path,
                     "RR",
-                    null,
+                    Collections.singletonList(1),
                     othersCanRead,
                     othersCanWrite
             );

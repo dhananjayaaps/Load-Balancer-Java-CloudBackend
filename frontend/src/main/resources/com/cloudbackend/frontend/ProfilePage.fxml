@@ -11,6 +11,7 @@
       fx:controller="com.cloudbackend.frontend.ProfileController">
 
     <children>
+        <Button fx:id="homeButton" text="Back" onAction="#homeButton" />
         <!-- Title -->
         <Label text="User Profile" style="-fx-font-size: 24px; -fx-font-weight: bold;" />
 

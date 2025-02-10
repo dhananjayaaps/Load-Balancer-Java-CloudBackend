@@ -74,7 +74,7 @@ public class FileService {
         fileName = fileName + "_" + randomValue;
 
         // Check if file already exists
-        String savePath = path;
+        String savePath = path + fileName;
         savePath = savePath.replaceAll("/+", "/").replaceAll("/$", ""); // Normalize path
 
         Optional<FileMetadata> existingFileOpt = fileMetadataRepository.findByPath(savePath);
@@ -110,7 +110,6 @@ public class FileService {
     }
 
 
-
     private void processUpload(String fileNameOriginal, String fileName, byte[] fileData, User owner, String path,
                                String schedulingAlgorithm, List<Integer> priorities, Optional<FileMetadata> existingFileOpt) throws Exception {
         try {
@@ -120,13 +119,14 @@ public class FileService {
             List<byte[]> chunks = chunkingService.splitFile(fileData, 1024);
             List<String> containers = List.of(storageContainers.split(","));
 
-            String savePath = "/" + owner.getUsername() + path + "/" + fileNameOriginal;
+            String savePath = path + "/" + fileNameOriginal;
             savePath = savePath.replaceAll("/+", "/").replaceAll("/$", "");
 
             FileMetadata metadata = existingFileOpt.orElse(new FileMetadata(fileName, savePath, (long) fileData.length, owner));
 
             metadata.setSize((long) fileData.length);
             metadata.setTotalChunks(chunks.size());
+            System.out.println(metadata.isDirectory() + " "+ metadata.getOwner() + " " + metadata.getPath() + " " + metadata.getName() + "writing");
             fileMetadataRepository.save(metadata);
 
             // Encrypt and upload chunks
