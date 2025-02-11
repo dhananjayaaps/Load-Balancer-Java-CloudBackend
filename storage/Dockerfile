@@ -1,11 +1,10 @@
-# Use the specified base image
 FROM pedrombmachado/ntu_lubuntu:comp20081
 
 # Set working directory
 WORKDIR /app
 
-# Install Python and pip
-RUN apt update && apt install -y python3 python3-pip python3-venv
+# Install Python, pip, and SSH server
+RUN apt update && apt install -y python3 python3-pip python3-venv openssh-server supervisor
 
 # Create and activate virtual environment
 RUN python3 -m venv /app/venv
@@ -19,16 +18,23 @@ RUN mkdir -p /chunks
 # Install dependencies into the virtual environment
 RUN /app/venv/bin/pip install --no-cache-dir -r requirements.txt
 
-# Expose the Flask port
-EXPOSE 5000
+# Configure SSH
+RUN mkdir -p /var/run/sshd
+RUN chmod 0755 /var/run/sshd
 
-# Install SSH Server in the container
-RUN apt update && apt install -y openssh-server
-RUN mkdir /var/run/sshd
-RUN echo 'root:root' | chpasswd  # Set root password (change this in production)
-RUN sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+# Set root password (Change 'rootpassword' to a secure password)
+RUN echo 'root:Rootpassword@23' | chpasswd
 
-EXPOSE 22
+# Allow root login and password authentication
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+RUN echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config
+RUN echo 'Port 22' >> /etc/ssh/sshd_config
 
-# Run the Flask application using the virtual environment's Python
-CMD service ssh start && /app/venv/bin/python app.py
+# Configure supervisord
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Expose Flask and SSH ports
+EXPOSE 5000 22
+
+# Start supervisord
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

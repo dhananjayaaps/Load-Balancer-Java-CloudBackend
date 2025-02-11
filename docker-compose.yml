@@ -4,6 +4,7 @@ services:
     container_name: chunk-container-1
     ports:
       - "8081:5000"
+      - "2201:22"
     volumes:
       - chunk_storage_1:/chunks
 
@@ -12,6 +13,7 @@ services:
     container_name: chunk-container-2
     ports:
       - "8082:5000"
+      - "2202:22" 
     volumes:
       - chunk_storage_2:/chunks
 
@@ -20,6 +22,7 @@ services:
     container_name: chunk-container-3
     ports:
       - "8083:5000"
+      - "2203:22"  
     volumes:
       - chunk_storage_3:/chunks
 
@@ -33,10 +36,10 @@ services:
       MYSQL_USER: myuser
       MYSQL_PASSWORD: mypassword
     ports:
-      - "3306:3306"  # Expose MySQL on localhost
+      - "3306:3306" 
     volumes:
       - mysql_data:/var/lib/mysql
-    command: ["mysqld", "--bind-address=0.0.0.0"]  # Allow external access
+    command: ["mysqld", "--bind-address=0.0.0.0"] 
 
 volumes:
   chunk_storage_1:
