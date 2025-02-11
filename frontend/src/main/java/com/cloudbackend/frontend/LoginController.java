@@ -12,6 +12,8 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.net.URI;
@@ -63,10 +65,18 @@ public class LoginController {
             // Handle response
             if (response.statusCode() == 200) {
                 // Extract JWT token from the response
-                String jwtToken = response.body();
+                JSONObject jsonResponse = new JSONObject(response.body());
+
+                String jwtToken = jsonResponse.getString("token");
+                JSONObject userJson = jsonResponse.getJSONObject("user");
 
                 ApplicationSession.setJwtToken(jwtToken);
                 ApplicationSession.setUsername(username);
+                // Extract role from the first object in the roles array
+
+                JSONArray rolesArray = userJson.getJSONArray("roles");
+                String role = rolesArray.getJSONObject(0).getString("role");
+                ApplicationSession.setRole(role);
 
                 // Show success alert
                 showAlert(Alert.AlertType.INFORMATION, "Login Success", "Welcome, " + username + "!");

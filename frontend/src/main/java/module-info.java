@@ -12,6 +12,7 @@ module com.cloudbackend.frontend {
     requires org.apache.httpcomponents.client5.httpclient5;
     requires org.apache.httpcomponents.core5.httpcore5;
     requires java.sql;
+    requires org.json;
 
     // Open package to both JavaFX and Jackson
     opens com.cloudbackend.frontend to javafx.fxml, com.fasterxml.jackson.databind;

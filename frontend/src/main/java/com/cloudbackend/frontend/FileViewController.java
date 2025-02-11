@@ -108,7 +108,12 @@ public class FileViewController {
     }
 
     private void gotoAdmin() throws IOException {
-        App.setRoot("UserManagement");
+        if (ApplicationSession.getRole().equals("ADMIN")) {
+            App.setRoot("UserManagement");
+        }
+        else {
+            new Alert(AlertType.ERROR, "Access Denied: You do not have permission to access this page.").show();
+        }
     }
 
     private void gotoProfile() throws IOException {
